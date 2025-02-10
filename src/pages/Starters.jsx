@@ -76,33 +76,40 @@ function Starters() {
     { label: 'WR1', player: starters.WR1 },
     { label: 'WR2', player: starters.WR2 },
     { label: 'TE', player: starters.TE },
-    { label: 'FLEX', player: starters.FLEX },
+    { label: 'RB/WR/TE', player: starters.FLEX },
     { label: 'K', player: starters.K },
     { label: 'D/ST', player: starters['D/ST'] }
+
   ];
 
   return (
     <div style={commonStyles.pageContainer}>
       <Header />
-      <h1 style={{ color: '#013369', marginBottom: '30px' }}>Starters</h1>
+      <h1 style={{ color: '#013369', marginBottom: '30px' }}>Set Starting Lineup</h1>
       
       {/* Starters section */}
       <div style={{
         ...commonStyles.card,
         marginBottom: '20px',
-        maxWidth: '1200px'
+        maxWidth: '1300px',
+        padding: '30px'
       }}>
         <h2 style={{ color: '#013369', marginBottom: '20px' }}>Starting Lineup</h2>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: 'repeat(5, 1fr)',
           gap: '20px',
-          justifyItems: 'center',
           width: '100%',
-          '@media (max-width: 900px)': {
+          '@media (max-width: 1300px)': {
+            gridTemplateColumns: 'repeat(4, 1fr)',
+          },
+          '@media (max-width: 1000px)': {
+            gridTemplateColumns: 'repeat(3, 1fr)',
+          },
+          '@media (max-width: 800px)': {
             gridTemplateColumns: 'repeat(2, 1fr)',
           },
-          '@media (max-width: 600px)': {
+          '@media (max-width: 500px)': {
             gridTemplateColumns: '1fr',
           },
         }}>
@@ -112,7 +119,10 @@ function Starters() {
               flexDirection: 'column',
               alignItems: 'center',
               gap: '10px',
-              width: '200px'
+              width: '100%',
+              minWidth: '200px',
+              maxWidth: '240px',
+              margin: '0 auto'
             }}>
               <div style={{
                 color: '#013369',
@@ -132,8 +142,8 @@ function Starters() {
                 />
               ) : (
                 <div style={{
-                  width: '200px',
-                  height: '200px',
+                  width: '100%',
+                  aspectRatio: '1',
                   border: '2px dashed #ccc',
                   borderRadius: '8px',
                   display: 'flex',
@@ -153,15 +163,18 @@ function Starters() {
       <div style={{
         ...commonStyles.card,
         marginBottom: '20px',
-        maxWidth: '1200px'
+        maxWidth: '1300px',
+        padding: '30px'
       }}>
-        <h2 style={{ color: '#013369', marginBottom: '20px' }}>Available Players</h2>
+        <h2 style={{ color: '#013369', marginBottom: '20px' }}>Bench</h2>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(5, 1fr)',
           gap: '20px',
-          justifyItems: 'center',
           width: '100%',
+          '@media (max-width: 1300px)': {
+            gridTemplateColumns: 'repeat(4, 1fr)',
+          },
           '@media (max-width: 1000px)': {
             gridTemplateColumns: 'repeat(3, 1fr)',
           },
@@ -172,14 +185,28 @@ function Starters() {
             gridTemplateColumns: '1fr',
           },
         }}>
-          {bench.map((player, index) => (
+          {bench.map((player) => (
             <div key={player.id} style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               gap: '10px',
-              width: '200px'
+              width: '100%',
+              minWidth: '200px',
+              maxWidth: '240px',
+              margin: '0 auto'
             }}>
+              <div style={{
+                color: '#013369',
+                fontWeight: 'bold',
+                fontSize: '0.9rem',
+                backgroundColor: '#f8f9fa',
+                padding: '5px 15px',
+                borderRadius: '15px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}>
+                {player.position}
+              </div>
               <PlayerCard 
                 player={player} 
                 onClick={(player) => handlePlayerClick(player, false)}
@@ -203,7 +230,6 @@ function Starters() {
         <PlayerDetailOverlay
           player={selectedPlayer}
           onClose={() => setSelectedPlayer(null)}
-          onSubstitute={handleSubstitute}
           isStarter={isSelectedPlayerStarter}
         />
       )}

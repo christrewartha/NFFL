@@ -61,3 +61,6 @@ const availablePlayers = {
     { id: '100003', name: 'Buffalo', team: 'BUF', number: '', position: 'D/ST' },
     { id: '100029', name: 'San Francisco', team: 'SF', number: '', position: 'D/ST' },
   ]
+}
+
+export default availablePlayers;

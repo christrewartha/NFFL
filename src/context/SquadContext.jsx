@@ -1,36 +1,54 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
 const SquadContext = createContext(null);
 
+const EMPTY_ROSTER = {
+  QB1: null,
+  QB2: null,
+  RB1: null,
+  RB2: null,
+  RB3: null,
+  WR1: null,
+  WR2: null,
+  WR3: null,
+  TE1: null,
+  TE2: null,
+  K: null,
+  'D/ST': null,
+};
+
+const EMPTY_STARTERS = {
+  QB: null,
+  RB1: null,
+  RB2: null,
+  WR1: null,
+  WR2: null,
+  TE: null,
+  FLEX: null,
+  K: null,
+  'D/ST': null,
+};
+
 export function SquadProvider({ children }) {
-  // Full roster with all slots
-  const [roster, setRoster] = useState({
-    QB1: { id: '2558125', name: 'Patrick Mahomes', team: 'KC', number: '15', position: 'QB' },
-    QB2: { id: '2563722', name: 'Joe Burrow', team: 'CIN', number: '9', position: 'QB' },
-    RB1: { id: '2557997', name: 'Christian McCaffrey', team: 'SF', number: '23', position: 'RB' },
-    RB2: { id: '2560968', name: 'Saquon Barkley', team: 'NYG', number: '26', position: 'RB' },
-    RB3: { id: '2561021', name: 'Nick Chubb', team: 'CLE', number: '24', position: 'RB' },
-    WR1: { id: '2564556', name: 'Justin Jefferson', team: 'MIN', number: '18', position: 'WR' },
-    WR2: { id: '2565941', name: "Ja'Marr Chase", team: 'CIN', number: '1', position: 'WR' },
-    WR3: { id: '2566409', name: 'DeVonta Smith', team: 'PHI', number: '6', position: 'WR' },
-    TE1: { id: '2540258', name: 'Travis Kelce', team: 'KC', number: '87', position: 'TE' },
-    TE2: { id: '2558266', name: 'George Kittle', team: 'SF', number: '85', position: 'TE' },
-    K: { id: '2536340', name: 'Justin Tucker', team: 'BAL', number: '9', position: 'K' },
-    'D/ST': { id: '100025', name: 'Philadelphia', team: 'PHI', number: '', position: 'D/ST' },
+  // Initialize state from localStorage or use empty roster
+  const [roster, setRoster] = useState(() => {
+    const savedRoster = localStorage.getItem('roster');
+    return savedRoster ? JSON.parse(savedRoster) : EMPTY_ROSTER;
   });
 
-  // Starting lineup configuration
-  const [starters, setStarters] = useState({
-    QB: roster.QB1,
-    RB1: roster.RB1,
-    RB2: roster.RB2,
-    WR1: roster.WR1,
-    WR2: roster.WR2,
-    TE: roster.TE1,
-    FLEX: roster.RB3,
-    K: roster.K,
-    'D/ST': roster['D/ST'],
+  const [starters, setStarters] = useState(() => {
+    const savedStarters = localStorage.getItem('starters');
+    return savedStarters ? JSON.parse(savedStarters) : EMPTY_STARTERS;
   });
+
+  // Save to localStorage whenever roster or starters change
+  useEffect(() => {
+    localStorage.setItem('roster', JSON.stringify(roster));
+  }, [roster]);
+
+  useEffect(() => {
+    localStorage.setItem('starters', JSON.stringify(starters));
+  }, [starters]);
 
   const removePlayer = (player) => {
     // Remove from roster
@@ -56,26 +74,52 @@ export function SquadProvider({ children }) {
     });
   };
 
-  const replacePlayer = (oldPlayer, newPlayer) => {
-    // Replace in roster
-    setRoster(prev => {
-      const newRoster = { ...prev };
-      Object.entries(newRoster).forEach(([key, value]) => {
-        if (value?.id === oldPlayer.id) {
-          newRoster[key] = newPlayer;
-        }
-      });
-      return newRoster;
-    });
+  const replacePlayer = (oldPlayer, newPlayer, targetSlot) => {
+    // Add to roster
+    setRoster(prev => ({
+      ...prev,
+      [targetSlot]: newPlayer
+    }));
 
-    // Replace in starters if present
+    // Try to place in starters if there's an empty slot
     setStarters(prev => {
       const newStarters = { ...prev };
-      Object.entries(newStarters).forEach(([key, value]) => {
-        if (value?.id === oldPlayer.id) {
-          newStarters[key] = newPlayer;
-        }
-      });
+      const position = newPlayer.position;  // Use the actual position, not the slot
+      const flexEligible = ['RB', 'WR', 'TE'].includes(position);
+      
+      // Find an empty starter slot
+      let starterSlot = null;
+      switch (position) {
+        case 'QB':
+          if (!prev.QB) starterSlot = 'QB';
+          break;
+        case 'RB':
+          if (!prev.RB1) starterSlot = 'RB1';
+          else if (!prev.RB2) starterSlot = 'RB2';
+          else if (!prev.FLEX && flexEligible) starterSlot = 'FLEX';
+          break;
+        case 'WR':
+          if (!prev.WR1) starterSlot = 'WR1';
+          else if (!prev.WR2) starterSlot = 'WR2';
+          else if (!prev.FLEX && flexEligible) starterSlot = 'FLEX';
+          break;
+        case 'TE':
+          if (!prev.TE) starterSlot = 'TE';
+          else if (!prev.FLEX && flexEligible) starterSlot = 'FLEX';
+          break;
+        case 'K':
+          if (!prev.K) starterSlot = 'K';
+          break;
+        case 'D/ST':
+          if (!prev['D/ST']) starterSlot = 'D/ST';
+          break;
+      }
+
+      // If we found an empty starter slot, use it
+      if (starterSlot) {
+        newStarters[starterSlot] = newPlayer;
+      }
+
       return newStarters;
     });
   };
@@ -106,6 +150,14 @@ export function SquadProvider({ children }) {
       .filter(player => player !== null && !starterIds.has(player.id));
   };
 
+  // Add function to clear roster and starters
+  const clearSquad = () => {
+    setRoster(EMPTY_ROSTER);
+    setStarters(EMPTY_STARTERS);
+    localStorage.removeItem('roster');
+    localStorage.removeItem('starters');
+  };
+
   const value = {
     squad: {
       roster,
@@ -116,6 +168,7 @@ export function SquadProvider({ children }) {
     replacePlayer,
     moveToStarters,
     movePlayerToBench,
+    clearSquad,
   };
 
   return (

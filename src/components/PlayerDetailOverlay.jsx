@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import defaultHeadshot from '../assets/headshots/headshot_default.png';
 import { useSquad } from '../context/SquadContext';
 
-function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
+function PlayerDetailOverlay({ player, onClose, isStarter }) {
   const navigate = useNavigate();
   const { squad, moveToStarters, movePlayerToBench } = useSquad();
   const { starters } = squad;
@@ -60,11 +60,6 @@ function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
     return positions;
   };
 
-  const handleReplace = (position) => {
-    moveToStarters(player, position);
-    onClose();
-  };
-
   const handleBenchClick = () => {
     if (isStarter) {
       const starterPosition = Object.entries(starters).find(
@@ -75,8 +70,24 @@ function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
         onClose();
       }
     } else {
-      setShowReplaceOptions(true);
+      // Check for empty slots first
+      const availablePositions = getAvailablePositions();
+      const emptySlot = availablePositions.find(pos => !pos.current);
+      
+      if (emptySlot) {
+        // If there's an empty slot, use it automatically
+        moveToStarters(player, emptySlot.slot);
+        onClose();
+      } else {
+        // If all slots are filled, show replacement options
+        setShowReplaceOptions(true);
+      }
     }
+  };
+
+  const handleReplace = (position) => {
+    moveToStarters(player, position);
+    onClose();
   };
 
   let playerHeadshot;
@@ -194,38 +205,40 @@ function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
         ) : (
           <div>
             <h3 style={{ color: '#013369', marginBottom: '15px', textAlign: 'center' }}>
-              Choose position to replace:
+              Choose player to replace:
             </h3>
             <div style={{
               display: 'flex',
               flexDirection: 'column',
               gap: '10px'
             }}>
-              {getAvailablePositions().map(({ slot, current }) => (
-                <button
-                  key={slot}
-                  onClick={() => handleReplace(slot)}
-                  style={{
-                    padding: '12px',
-                    backgroundColor: 'white',
-                    color: '#013369',
-                    border: '2px solid #013369',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    fontSize: '1rem',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    ':hover': {
-                      backgroundColor: '#f8f9fa'
-                    }
-                  }}
-                >
-                  <span>{slot}</span>
-                  <span style={{ color: '#666', fontSize: '0.9rem' }}>
-                    {current ? `Replace ${current.name}` : 'Empty Slot'}
-                  </span>
-                </button>
+              {getAvailablePositions()
+                .filter(pos => pos.current) // Only show filled positions
+                .map(({ slot, current }) => (
+                  <button
+                    key={slot}
+                    onClick={() => handleReplace(slot)}
+                    style={{
+                      padding: '12px',
+                      backgroundColor: 'white',
+                      color: '#013369',
+                      border: '2px solid #013369',
+                      borderRadius: '5px',
+                      cursor: 'pointer',
+                      fontSize: '1rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      ':hover': {
+                        backgroundColor: '#f8f9fa'
+                      }
+                    }}
+                  >
+                    <span>{current.name}</span>
+                    <span style={{ color: '#666', fontSize: '0.9rem' }}>
+                      {slot}
+                    </span>
+                  </button>
               ))}
               <button
                 onClick={() => setShowReplaceOptions(false)}

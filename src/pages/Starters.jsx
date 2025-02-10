@@ -34,6 +34,7 @@ function Starters() {
     } else {
       // Find an empty position that matches the player's position
       let targetPosition = null;
+      const flexEligible = ['RB', 'WR', 'TE'].includes(selectedPlayer.position);
       
       switch (selectedPlayer.position) {
         case 'QB':
@@ -42,16 +43,16 @@ function Starters() {
         case 'RB':
           if (!starters.RB1) targetPosition = 'RB1';
           else if (!starters.RB2) targetPosition = 'RB2';
-          else if (!starters.FLEX) targetPosition = 'FLEX';
+          else if (!starters.FLEX && flexEligible) targetPosition = 'FLEX';
           break;
         case 'WR':
           if (!starters.WR1) targetPosition = 'WR1';
           else if (!starters.WR2) targetPosition = 'WR2';
-          else if (!starters.FLEX) targetPosition = 'FLEX';
+          else if (!starters.FLEX && flexEligible) targetPosition = 'FLEX';
           break;
         case 'TE':
           if (!starters.TE) targetPosition = 'TE';
-          else if (!starters.FLEX) targetPosition = 'FLEX';
+          else if (!starters.FLEX && flexEligible) targetPosition = 'FLEX';
           break;
         case 'K':
           if (!starters.K) targetPosition = 'K';

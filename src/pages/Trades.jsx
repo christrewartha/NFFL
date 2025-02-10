@@ -41,8 +41,8 @@ function Trades() {
   };
 
   const slots = [
-    'QB1', 'QB2', 'RB1', 'RB2', 'RB3', 'RB4',
-    'WR1', 'WR2', 'WR3', 'WR4', 'TE1', 'TE2',
+    'QB1', 'QB2', 'RB1', 'RB2', 'RB3',
+    'WR1', 'WR2', 'WR3', 'TE1', 'TE2',
     'K', 'D/ST'
   ];
 

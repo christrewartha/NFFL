@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import defaultHeadshot from '../assets/headshots/headshot_default.png';
 import { useSquad } from '../context/SquadContext';
 
 function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
   const navigate = useNavigate();
-  const { squad } = useSquad();
+  const { squad, moveToStarters, movePlayerToBench } = useSquad();
   const { starters } = squad;
+  const [showReplaceOptions, setShowReplaceOptions] = useState(false);
   
   if (!player) return null;
 
@@ -16,45 +17,66 @@ function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
     onClose();
   };
 
-  // Find all possible positions this player could move to
+  // Get available positions this player could take
   const getAvailablePositions = () => {
-    if (isStarter) return true; // Can always move to bench
-
     const positions = [];
+    const flexEligible = ['RB', 'WR', 'TE'].includes(player.position);
     
     switch (player.position) {
       case 'QB':
-        if (!starters.QB) positions.push('QB');
+        positions.push({ slot: 'QB', current: starters.QB });
         break;
       case 'RB':
-        if (!starters.RB1) positions.push('RB1');
-        if (!starters.RB2) positions.push('RB2');
-        if (!starters.FLEX || ['RB', 'WR', 'TE'].includes(starters.FLEX?.position)) {
-          positions.push('FLEX');
+        positions.push(
+          { slot: 'RB1', current: starters.RB1 },
+          { slot: 'RB2', current: starters.RB2 }
+        );
+        if (flexEligible) {
+          positions.push({ slot: 'FLEX', current: starters.FLEX });
         }
         break;
       case 'WR':
-        if (!starters.WR1) positions.push('WR1');
-        if (!starters.WR2) positions.push('WR2');
-        if (!starters.FLEX || ['RB', 'WR', 'TE'].includes(starters.FLEX?.position)) {
-          positions.push('FLEX');
+        positions.push(
+          { slot: 'WR1', current: starters.WR1 },
+          { slot: 'WR2', current: starters.WR2 }
+        );
+        if (flexEligible) {
+          positions.push({ slot: 'FLEX', current: starters.FLEX });
         }
         break;
       case 'TE':
-        if (!starters.TE) positions.push('TE');
-        if (!starters.FLEX || ['RB', 'WR', 'TE'].includes(starters.FLEX?.position)) {
-          positions.push('FLEX');
+        positions.push({ slot: 'TE', current: starters.TE });
+        if (flexEligible) {
+          positions.push({ slot: 'FLEX', current: starters.FLEX });
         }
         break;
       case 'K':
-        if (!starters.K) positions.push('K');
+        positions.push({ slot: 'K', current: starters.K });
         break;
       case 'D/ST':
-        if (!starters['D/ST']) positions.push('D/ST');
+        positions.push({ slot: 'D/ST', current: starters['D/ST'] });
         break;
     }
+    return positions;
+  };
 
-    return positions.length > 0;
+  const handleReplace = (position) => {
+    moveToStarters(player, position);
+    onClose();
+  };
+
+  const handleBenchClick = () => {
+    if (isStarter) {
+      const starterPosition = Object.entries(starters).find(
+        ([_, p]) => p?.id === player.id
+      )?.[0];
+      if (starterPosition) {
+        movePlayerToBench(player, starterPosition);
+        onClose();
+      }
+    } else {
+      setShowReplaceOptions(true);
+    }
   };
 
   let playerHeadshot;
@@ -63,12 +85,6 @@ function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
   } catch {
     playerHeadshot = defaultHeadshot;
   }
-
-  const isMovePossible = isStarter || getAvailablePositions();
-  const moveButtonText = isStarter ? 'Move to Bench' : 'Move to Starting';
-  const moveButtonTooltip = !isMovePossible 
-    ? `No available ${player.position} or FLEX positions` 
-    : '';
 
   return (
     <div style={{
@@ -93,7 +109,6 @@ function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
         overflow: 'auto',
         position: 'relative',
       }} onClick={e => e.stopPropagation()}>
-        {/* Close button */}
         <button 
           onClick={onClose}
           style={{
@@ -110,7 +125,6 @@ function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
           ×
         </button>
 
-        {/* Player info */}
         <div style={{ 
           display: 'flex', 
           gap: '20px',
@@ -140,44 +154,97 @@ function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div style={{
-          display: 'flex',
-          gap: '15px',
-          justifyContent: 'center'
-        }}>
-          <button
-            onClick={isMovePossible ? onSubstitute : undefined}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: isMovePossible ? '#013369' : '#cccccc',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: isMovePossible ? 'pointer' : 'not-allowed',
-              fontSize: '1rem',
-              fontWeight: 'bold'
-            }}
-            title={moveButtonTooltip}
-          >
-            {moveButtonText}
-          </button>
-          <button
-            onClick={handleViewProfile}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'white',
-              color: '#013369',
-              border: '2px solid #013369',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: 'bold'
-            }}
-          >
-            Full Profile
-          </button>
-        </div>
+        {!showReplaceOptions ? (
+          <div style={{
+            display: 'flex',
+            gap: '15px',
+            justifyContent: 'center'
+          }}>
+            <button
+              onClick={handleBenchClick}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#013369',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                fontWeight: 'bold'
+              }}
+            >
+              {isStarter ? 'Move to Bench' : 'Move to Starting'}
+            </button>
+            <button
+              onClick={handleViewProfile}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: 'white',
+                color: '#013369',
+                border: '2px solid #013369',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                fontWeight: 'bold'
+              }}
+            >
+              Full Profile
+            </button>
+          </div>
+        ) : (
+          <div>
+            <h3 style={{ color: '#013369', marginBottom: '15px', textAlign: 'center' }}>
+              Choose position to replace:
+            </h3>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px'
+            }}>
+              {getAvailablePositions().map(({ slot, current }) => (
+                <button
+                  key={slot}
+                  onClick={() => handleReplace(slot)}
+                  style={{
+                    padding: '12px',
+                    backgroundColor: 'white',
+                    color: '#013369',
+                    border: '2px solid #013369',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    ':hover': {
+                      backgroundColor: '#f8f9fa'
+                    }
+                  }}
+                >
+                  <span>{slot}</span>
+                  <span style={{ color: '#666', fontSize: '0.9rem' }}>
+                    {current ? `Replace ${current.name}` : 'Empty Slot'}
+                  </span>
+                </button>
+              ))}
+              <button
+                onClick={() => setShowReplaceOptions(false)}
+                style={{
+                  padding: '12px',
+                  backgroundColor: '#f8f9fa',
+                  color: '#666',
+                  border: '1px solid #ccc',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  marginTop: '10px'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

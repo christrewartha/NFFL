@@ -6,19 +6,17 @@ export function SquadProvider({ children }) {
   // Full roster with all slots
   const [roster, setRoster] = useState({
     QB1: { id: '2558125', name: 'Patrick Mahomes', team: 'KC', number: '15', position: 'QB' },
-    QB2: { id: '2560955', name: 'Josh Allen', team: 'BUF', number: '17', position: 'QB' },
-    RB1: { id: '2560968', name: 'Saquon Barkley', team: 'NYG', number: '26', position: 'RB' },
-    RB2: { id: '2566448', name: 'Najee Harris', team: 'PIT', number: '22', position: 'RB' },
-    RB3: { id: '2567685', name: 'Dameon Pierce', team: 'HOU', number: '31', position: 'RB' },
-    RB4: { id: '2568348', name: 'Brian Robinson', team: 'WAS', number: '8', position: 'RB' },
-    WR1: { id: '2552608', name: 'Stefon Diggs', team: 'BUF', number: '14', position: 'WR' },
+    QB2: { id: '2563722', name: 'Joe Burrow', team: 'CIN', number: '9', position: 'QB' },
+    RB1: { id: '2557997', name: 'Christian McCaffrey', team: 'SF', number: '23', position: 'RB' },
+    RB2: { id: '2560968', name: 'Saquon Barkley', team: 'NYG', number: '26', position: 'RB' },
+    RB3: { id: '2561021', name: 'Nick Chubb', team: 'CLE', number: '24', position: 'RB' },
+    WR1: { id: '2564556', name: 'Justin Jefferson', team: 'MIN', number: '18', position: 'WR' },
     WR2: { id: '2565941', name: "Ja'Marr Chase", team: 'CIN', number: '1', position: 'WR' },
-    WR3: { id: '2556214', name: 'Tyreek Hill', team: 'MIA', number: '10', position: 'WR' },
-    WR4: { id: '2563848', name: 'CeeDee Lamb', team: 'DAL', number: '88', position: 'WR' },
-    TE1: { id: '2560957', name: 'Mark Andrews', team: 'BAL', number: '89', position: 'TE' },
+    WR3: { id: '2566409', name: 'DeVonta Smith', team: 'PHI', number: '6', position: 'WR' },
+    TE1: { id: '2540258', name: 'Travis Kelce', team: 'KC', number: '87', position: 'TE' },
     TE2: { id: '2558266', name: 'George Kittle', team: 'SF', number: '85', position: 'TE' },
     K: { id: '2536340', name: 'Justin Tucker', team: 'BAL', number: '9', position: 'K' },
-    'D/ST': { id: '100029', name: 'San Francisco', team: 'SF', number: '', position: 'D/ST' },
+    'D/ST': { id: '100025', name: 'Philadelphia', team: 'PHI', number: '', position: 'D/ST' },
   });
 
   // Starting lineup configuration

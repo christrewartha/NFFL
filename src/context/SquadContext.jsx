@@ -41,6 +41,8 @@ export function SquadProvider({ children }) {
     return savedStarters ? JSON.parse(savedStarters) : EMPTY_STARTERS;
   });
 
+  const [money, setMoney] = useState(120);
+
   // Save to localStorage whenever roster or starters change
   useEffect(() => {
     localStorage.setItem('roster', JSON.stringify(roster));
@@ -74,8 +76,22 @@ export function SquadProvider({ children }) {
     });
   };
 
+  const calculateTeamCost = () => {
+    return Object.values(roster)
+      .filter(player => player) // Remove null/undefined
+      .reduce((total, player) => total + player.cost, 0);
+  };
+
+  const clearSquad = () => {
+    setRoster(EMPTY_ROSTER);
+    setStarters(EMPTY_STARTERS);
+    setMoney(120);
+  };
+
   const replacePlayer = (oldPlayer, newPlayer, targetSlot) => {
-    // Add to roster
+    console.log('Replacing player:', { oldPlayer, newPlayer, targetSlot });
+    
+    // Update roster
     setRoster(prev => ({
       ...prev,
       [targetSlot]: newPlayer
@@ -84,7 +100,7 @@ export function SquadProvider({ children }) {
     // Try to place in starters if there's an empty slot
     setStarters(prev => {
       const newStarters = { ...prev };
-      const position = newPlayer.position;  // Use the actual position, not the slot
+      const position = newPlayer.position;
       const flexEligible = ['RB', 'WR', 'TE'].includes(position);
       
       // Find an empty starter slot
@@ -150,14 +166,6 @@ export function SquadProvider({ children }) {
       .filter(player => player !== null && !starterIds.has(player.id));
   };
 
-  // Add function to clear roster and starters
-  const clearSquad = () => {
-    setRoster(EMPTY_ROSTER);
-    setStarters(EMPTY_STARTERS);
-    localStorage.removeItem('roster');
-    localStorage.removeItem('starters');
-  };
-
   const value = {
     squad: {
       roster,
@@ -169,6 +177,8 @@ export function SquadProvider({ children }) {
     moveToStarters,
     movePlayerToBench,
     clearSquad,
+    money,
+    teamCost: calculateTeamCost()
   };
 
   return (

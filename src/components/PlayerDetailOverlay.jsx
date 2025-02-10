@@ -104,52 +104,49 @@ function PlayerDetailOverlay({ player, onClose, isStarter }) {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      zIndex: 1000,
-    }} onClick={onClose}>
+      zIndex: 1000
+    }}>
       <div style={{
         backgroundColor: 'white',
-        padding: '30px',
         borderRadius: '12px',
-        width: '90%',
+        padding: '30px',
         maxWidth: '500px',
-        maxHeight: '80vh',
-        overflow: 'auto',
-        position: 'relative',
-      }} onClick={e => e.stopPropagation()}>
-        <button 
+        width: '90%',
+        position: 'relative'
+      }}>
+        <button
           onClick={onClose}
           style={{
             position: 'absolute',
-            top: '10px',
-            right: '10px',
-            border: 'none',
+            top: '15px',
+            right: '15px',
             background: 'none',
-            fontSize: '24px',
+            border: 'none',
+            fontSize: '1.5rem',
             cursor: 'pointer',
-            color: '#666',
+            color: '#666'
           }}
         >
           ×
         </button>
 
-        <div style={{ 
-          display: 'flex', 
-          gap: '20px',
-          marginBottom: '30px',
-          alignItems: 'center'
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          marginBottom: '20px'
         }}>
           <img 
             src={playerHeadshot}
             alt={`${player.name} headshot`}
             style={{
-              width: '150px',
-              height: '150px',
-              objectFit: 'cover',
-              borderRadius: '75px',
+              width: '100px',
+              height: '100px',
+              borderRadius: '50%',
+              marginRight: '20px',
               border: '3px solid #013369'
             }}
             onError={(e) => {
@@ -158,10 +155,39 @@ function PlayerDetailOverlay({ player, onClose, isStarter }) {
             }}
           />
           <div>
-            <h2 style={{ color: '#013369', marginBottom: '10px' }}>{player.name}</h2>
-            <p style={{ color: '#666', fontSize: '1.1rem' }}>
-              {player.position} • {player.team} #{player.number}
-            </p>
+            <h2 style={{ 
+              color: '#013369',
+              marginBottom: '5px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}>
+              {player.name}
+              <span style={{
+                backgroundColor: '#013369',
+                color: 'white',
+                padding: '4px 12px',
+                borderRadius: '12px',
+                fontSize: '1rem'
+              }}>
+                ${player.cost}
+              </span>
+            </h2>
+            <div style={{
+              color: '#666',
+              fontSize: '1.1rem'
+            }}>
+              {player.team} • #{player.number} • {player.position}
+              {isStarter && (
+                <span style={{
+                  marginLeft: '10px',
+                  color: '#013369',
+                  fontWeight: 'bold'
+                }}>
+                  • Starter
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

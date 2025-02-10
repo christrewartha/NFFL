@@ -10,7 +10,7 @@ function Trades() {
   const navigate = useNavigate();
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const { squad, removePlayer, clearSquad } = useSquad();
+  const { squad, removePlayer, clearSquad, money, teamCost } = useSquad();
   const { roster } = squad;
 
   const handlePlayerClick = (player) => {
@@ -20,15 +20,27 @@ function Trades() {
   const handleEmptySlotClick = (position) => {
     navigate('/players', { 
       state: { 
-        replacingPlayer: { position } 
+        replacingPlayer: { 
+          position,
+          slotId: position 
+        } 
       }
     });
   };
 
   const handleReplace = () => {
+    const currentSlot = Object.entries(roster).find(
+      ([_, p]) => p?.id === selectedPlayer.id
+    )?.[0];
+
+    removePlayer(selectedPlayer);
+
     navigate('/players', { 
       state: { 
-        replacingPlayer: selectedPlayer 
+        replacingPlayer: {
+          ...selectedPlayer,
+          slotId: currentSlot
+        }
       }
     });
     setSelectedPlayer(null);
@@ -54,26 +66,42 @@ function Trades() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '30px',
-        maxWidth: '1300px',
-        width: '100%'
+        marginBottom: '30px'
       }}>
-        <h1 style={{ color: '#013369' }}>Manage Players</h1>
-        <button
-          onClick={() => setShowResetConfirm(true)}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#dc3545',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            fontSize: '0.9rem',
-            fontWeight: 'bold'
-          }}
-        >
-          Reset Squad
-        </button>
+        <h1 style={{ color: '#013369' }}>Build Your Team</h1>
+        <div style={{
+          display: 'flex',
+          gap: '20px',
+          alignItems: 'center',
+          marginLeft: 'auto'
+        }}>
+          <div style={{
+            backgroundColor: '#f8f9fa',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            border: '1px solid #e0e0e0',
+            whiteSpace: 'nowrap'
+          }}>
+            <span style={{ color: '#666' }}>Budget: </span>
+            <span style={{ 
+              color: money - teamCost >= 0 ? '#28a745' : '#dc3545',
+              fontWeight: 'bold'
+            }}>
+              ${money - teamCost}
+            </span>
+            <span style={{ color: '#666' }}> / ${money}</span>
+          </div>
+          <button
+            onClick={() => setShowResetConfirm(true)}
+            style={{
+              ...commonStyles.primaryButton,
+              backgroundColor: '#dc3545',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Reset Squad
+          </button>
+        </div>
       </div>
       
       <div style={{
@@ -122,14 +150,14 @@ function Trades() {
               }}>
                 {slot}
               </div>
-              {roster?.[slot] ? (
+              {roster[slot] ? (
                 <PlayerCard 
                   player={roster[slot]} 
                   onClick={handlePlayerClick}
                 />
               ) : (
                 <div 
-                  onClick={() => handleEmptySlotClick(slot.replace(/\d+/, ''))}
+                  onClick={() => handleEmptySlotClick(slot)}
                   style={{
                     width: '100%',
                     aspectRatio: '1',

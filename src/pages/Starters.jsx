@@ -11,7 +11,7 @@ function Starters() {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [isSelectedPlayerStarter, setIsSelectedPlayerStarter] = useState(false);
   
-  const { squad, moveToStarters, movePlayerToBench } = useSquad();
+  const { squad, moveToStarters, movePlayerToBench, money, teamCost } = useSquad();
   const { starters, bench } = squad;
 
   const handlePlayerClick = (player, isStarter = false) => {
@@ -85,7 +85,30 @@ function Starters() {
   return (
     <div style={commonStyles.pageContainer}>
       <Header />
-      <h1 style={{ color: '#013369', marginBottom: '30px' }}>Set Starting Lineup</h1>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '30px'
+      }}>
+        <h1 style={{ color: '#013369' }}>Starting Lineup</h1>
+        <div style={{
+          backgroundColor: '#f8f9fa',
+          padding: '10px 20px',
+          borderRadius: '8px',
+          border: '1px solid #e0e0e0',
+          whiteSpace: 'nowrap'
+        }}>
+          <span style={{ color: '#666' }}>Budget: </span>
+          <span style={{ 
+            color: money - teamCost >= 0 ? '#28a745' : '#dc3545',
+            fontWeight: 'bold'
+          }}>
+            ${money - teamCost}
+          </span>
+          <span style={{ color: '#666' }}> / ${money}</span>
+        </div>
+      </div>
       
       {/* Starters section */}
       <div style={{

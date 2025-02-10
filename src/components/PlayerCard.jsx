@@ -1,6 +1,6 @@
 import defaultHeadshot from '../assets/headshots/headshot_default.png';
 
-function PlayerCard({ player, onClick }) {
+function PlayerCard({ player, onClick, isStarter }) {
   // Dynamically import the player's headshot
   let playerHeadshot;
   try {
@@ -13,32 +13,56 @@ function PlayerCard({ player, onClick }) {
     <div 
       onClick={() => onClick(player)}
       style={{
-        width: '200px',
-        height: '250px',
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '15px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        cursor: 'pointer',
+        position: 'relative',
+        width: '100%',
         backgroundColor: 'white',
-        transition: 'transform 0.2s, box-shadow 0.2s',
+        borderRadius: '12px',
+        border: '1px solid #e0e0e0',
+        padding: '15px',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
         ':hover': {
-          transform: 'translateY(-5px)',
-          boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+          transform: 'translateY(-2px)',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          borderColor: '#013369'
         }
       }}
     >
+      {isStarter && (
+        <div style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          backgroundColor: '#013369',
+          color: 'white',
+          padding: '4px 8px',
+          borderRadius: '12px',
+          fontSize: '0.8rem'
+        }}>
+          Starter
+        </div>
+      )}
+      <div style={{
+        position: 'absolute',
+        top: '10px',
+        left: '10px',
+        backgroundColor: '#013369',
+        color: 'white',
+        padding: '4px 8px',
+        borderRadius: '12px',
+        fontSize: '0.8rem'
+      }}>
+        ${player.cost}
+      </div>
       <img 
         src={playerHeadshot}
         alt={`${player.name} headshot`}
         style={{
-          width: '150px',
-          height: '150px',
-          borderRadius: '75px',
-          marginBottom: '15px',
-          border: '3px solid #013369'
+          width: '100%',
+          aspectRatio: '1',
+          objectFit: 'cover',
+          borderRadius: '8px',
+          marginBottom: '10px'
         }}
         onError={(e) => {
           e.target.onerror = null;
@@ -51,7 +75,7 @@ function PlayerCard({ player, onClick }) {
         <div style={{
           fontWeight: 'bold',
           color: '#013369',
-          marginBottom: '5px'
+          marginBottom: '4px'
         }}>
           {player.name}
         </div>
@@ -59,7 +83,7 @@ function PlayerCard({ player, onClick }) {
           color: '#666',
           fontSize: '0.9rem'
         }}>
-          {player.position} • {player.team} #{player.number}
+          {player.team} • #{player.number} • {player.position}
         </div>
       </div>
     </div>

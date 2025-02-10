@@ -67,10 +67,12 @@ function Players() {
   };
 
   // Filter players based on the position we're replacing
-  const filteredPlayers = playerStats.filter(player => {
-    if (!replacingPlayer) return true;
-    return player.position === replacingPlayer.position.replace(/\d+/, '');
-  });
+  const filteredPlayers = playerStats
+    .filter(player => {
+      if (!replacingPlayer) return true;
+      return player.position === replacingPlayer.position.replace(/\d+/, '');
+    })
+    .sort((a, b) => b.cost - a.cost); // Sort players by cost in descending order
 
   return (
     <div style={commonStyles.pageContainer}>

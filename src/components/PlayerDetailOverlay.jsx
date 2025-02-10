@@ -1,9 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import defaultHeadshot from '../assets/headshots/headshot_default.png';
+import { useSquad } from '../context/SquadContext';
 
 function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
   const navigate = useNavigate();
+  const { squad } = useSquad();
+  const { starters } = squad;
   
   if (!player) return null;
 
@@ -13,6 +16,29 @@ function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
     onClose();
   };
 
+  // Check if the player can be moved to starters
+  const canMoveToStarters = () => {
+    if (isStarter) return true; // Already a starter, can always move to bench
+    
+    // Check available positions based on player's position
+    switch (player.position) {
+      case 'QB':
+        return !starters.QB;
+      case 'RB':
+        return !starters.RB1 || !starters.RB2 || !starters.FLEX;
+      case 'WR':
+        return !starters.WR1 || !starters.WR2 || !starters.FLEX;
+      case 'TE':
+        return !starters.TE || !starters.FLEX;
+      case 'K':
+        return !starters.K;
+      case 'D/ST':
+        return !starters['D/ST'];
+      default:
+        return false;
+    }
+  };
+
   let playerHeadshot;
   try {
     playerHeadshot = new URL(`../assets/headshots/${player.id}.png`, import.meta.url).href;
@@ -20,8 +46,7 @@ function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
     playerHeadshot = defaultHeadshot;
   }
 
-  // Check if position is eligible for substitution
-  const canSubstitute = true;
+  const isMovePossible = isStarter || canMoveToStarters();
 
   return (
     <div style={{
@@ -99,23 +124,22 @@ function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
           gap: '15px',
           justifyContent: 'center'
         }}>
-          {canSubstitute && (
-            <button
-              onClick={onSubstitute}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#013369',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: 'bold'
-              }}
-            >
-              {isStarter ? 'Move to Bench' : 'Move to Starting'}
-            </button>
-          )}
+          <button
+            onClick={isMovePossible ? onSubstitute : undefined}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: isMovePossible ? '#013369' : '#cccccc',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: isMovePossible ? 'pointer' : 'not-allowed',
+              fontSize: '1rem',
+              fontWeight: 'bold'
+            }}
+            title={!isMovePossible ? 'No available starting positions for this player' : ''}
+          >
+            {isStarter ? 'Move to Bench' : 'Move to Starting'}
+          </button>
           <button
             onClick={handleViewProfile}
             style={{

@@ -1,5 +1,6 @@
 import './App.css'
 import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
+import { SquadProvider } from './context/SquadContext';
 
 import Login from './pages/Login';
 import Menu from './pages/Menu';
@@ -48,8 +49,8 @@ function App() {
   console.log('App component rendered'); // Debug log
   
   return (
-    <>
-      <Router>
+    <Router>
+      <SquadProvider>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
@@ -61,8 +62,8 @@ function App() {
           <Route path="/player/:playerId" element={<PlayerProfile />} />
           <Route path="/players" element={<Players />} />
         </Routes>
-      </Router>
-    </>
+      </SquadProvider>
+    </Router>
   );
 }
 

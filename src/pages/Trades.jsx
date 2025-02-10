@@ -3,34 +3,25 @@ import { useState } from 'react';
 import Header from '../components/Header';
 import PlayerCard from '../components/PlayerCard';
 import TradePlayerOverlay from '../components/TradePlayerOverlay';
+import { useSquad } from '../context/SquadContext';
 import { commonStyles } from '../styles/commonStyles';
 
 function Trades() {
   const navigate = useNavigate();
   const [selectedPlayer, setSelectedPlayer] = useState(null);
-
-  const [squad, setSquad] = useState({
-    starters: {
-        QB: { id: '2504211', name: 'Tom Brady', team: 'TB', number: '12', position: 'QB' },
-        RB1: { id: '2556075', name: 'Derrick Henry', team: 'TEN', number: '22', position: 'RB' },
-        RB2: { id: '2564148', name: 'Jonathan Taylor', team: 'IND', number: '28', position: 'RB' },
-        WR1: { id: '2564556', name: 'Justin Jefferson', team: 'MIN', number: '18', position: 'WR' },
-        WR2: { id: '2565941', name: "Ja'Marr Chase", team: 'CIN', number: '1', position: 'WR' },
-        TE: { id: '2540258', name: 'Travis Kelce', team: 'KC', number: '87', position: 'TE' },
-        FLEX: { id: '2559169', name: 'Austin Ekeler', team: 'LAC', number: '30', position: 'RB' },
-        K: { id: '2536340', name: 'Justin Tucker', team: 'BAL', number: '9', position: 'K' },
-        'D/ST': { id: '100029', name: 'San Francisco', team: 'SF', number: '', position: 'D/ST' },
-    },
-    bench: [
-        { id: '2566163', name: 'Trevor Lawrence', team: 'JAX', number: '16', position: 'QB' },
-        { id: '2557997', name: 'Christian McCaffrey', team: 'SF', number: '23', position: 'RB' },
-        { id: '2566409', name: 'DeVonta Smith', team: 'PHI', number: '6', position: 'WR' },
-        { id: '2558266', name: 'George Kittle', team: 'SF', number: '85', position: 'TE' },
-    ]
-  });
+  const { squad, removePlayer } = useSquad();
+  const { starters, bench } = squad;
 
   const handlePlayerClick = (player) => {
     setSelectedPlayer(player);
+  };
+
+  const handleEmptySlotClick = (position) => {
+    navigate('/players', { 
+      state: { 
+        replacingPlayer: { position } 
+      }
+    });
   };
 
   const handleReplace = () => {
@@ -43,29 +34,14 @@ function Trades() {
   };
 
   const handleRemove = () => {
-    setSquad(prev => {
-      const newSquad = { ...prev };
-      
-      // Remove from starters if present
-      Object.entries(newSquad.starters).forEach(([key, player]) => {
-        if (player?.name === selectedPlayer.name) {
-          newSquad.starters[key] = null;
-        }
-      });
-      
-      // Remove from bench if present
-      newSquad.bench = newSquad.bench.filter(
-        player => player?.name !== selectedPlayer.name
-      );
-      
-      return newSquad;
-    });
-    
-    setSelectedPlayer(null);
+    if (selectedPlayer) {
+      removePlayer(selectedPlayer);
+      setSelectedPlayer(null);
+    }
   };
 
   const positionOrder = ['QB', 'RB1', 'RB2', 'WR1', 'WR2', 'TE', 'FLEX', 'K', 'D/ST'];
-  const benchSlots = Math.max(5, squad.bench.length + 1);
+  const benchSlots = Math.max(5, bench.length + 1);
 
   return (
     <div style={commonStyles.pageContainer}>
@@ -95,8 +71,8 @@ function Trades() {
             gridTemplateColumns: '1fr',
           },
         }}>
-          {positionOrder.map((pos) => (
-            <div key={pos} style={{
+          {positionOrder.map((position) => (
+            <div key={position} style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -112,25 +88,35 @@ function Trades() {
                 borderRadius: '15px',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
               }}>
-                {pos}
+                {position}
               </div>
-              {squad.starters[pos] ? (
+              {starters[position] ? (
                 <PlayerCard 
-                  player={squad.starters[pos]} 
+                  player={starters[position]} 
                   onClick={handlePlayerClick}
                 />
               ) : (
-                <div style={{
-                  width: '200px',
-                  height: '200px',
-                  border: '2px dashed #ccc',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#666'
-                }}>
-                  Empty Slot
+                <div 
+                  onClick={() => handleEmptySlotClick(position)}
+                  style={{
+                    width: '200px',
+                    height: '200px',
+                    border: '2px dashed #ccc',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#666',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    ':hover': {
+                      borderColor: '#013369',
+                      color: '#013369',
+                      backgroundColor: '#f8f9fa'
+                    }
+                  }}
+                >
+                  Add Player
                 </div>
               )}
             </div>
@@ -180,23 +166,33 @@ function Trades() {
               }}>
                 BENCH {index + 1}
               </div>
-              {squad.bench[index] ? (
+              {bench[index] ? (
                 <PlayerCard 
-                  player={squad.bench[index]} 
+                  player={bench[index]} 
                   onClick={handlePlayerClick}
                 />
               ) : (
-                <div style={{
-                  width: '200px',
-                  height: '200px',
-                  border: '2px dashed #ccc',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#666'
-                }}>
-                  Empty Slot
+                <div 
+                  onClick={() => handleEmptySlotClick('BENCH')}
+                  style={{
+                    width: '200px',
+                    height: '200px',
+                    border: '2px dashed #ccc',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#666',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    ':hover': {
+                      borderColor: '#013369',
+                      color: '#013369',
+                      backgroundColor: '#f8f9fa'
+                    }
+                  }}
+                >
+                  Add Player
                 </div>
               )}
             </div>

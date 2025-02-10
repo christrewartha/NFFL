@@ -3,86 +3,121 @@ import { createContext, useContext, useState } from 'react';
 const SquadContext = createContext(null);
 
 export function SquadProvider({ children }) {
-  const [squad, setSquad] = useState({
-    starters: {
-        QB: { id: '2555334', name: 'Jared Goff', team: 'DET', number: '16', position: 'QB' },
-        RB1: { id: '2556075', name: 'Derrick Henry', team: 'TEN', number: '22', position: 'RB' },
-        RB2: { id: '2564148', name: 'Jonathan Taylor', team: 'IND', number: '28', position: 'RB' },
-        WR1: { id: '2564556', name: 'Justin Jefferson', team: 'MIN', number: '18', position: 'WR' },
-        WR2: { id: '2565941', name: "Ja'Marr Chase", team: 'CIN', number: '1', position: 'WR' },
-        TE: { id: '2540258', name: 'Travis Kelce', team: 'KC', number: '87', position: 'TE' },
-        FLEX: { id: '2559169', name: 'Austin Ekeler', team: 'LAC', number: '30', position: 'RB' },
-        K: { id: '2536340', name: 'Justin Tucker', team: 'BAL', number: '9', position: 'K' },
-        'D/ST': { id: '100029', name: 'San Francisco', team: 'SF', number: '', position: 'D/ST' },
-    },
-    bench: [
-        { id: '2566163', name: 'Trevor Lawrence', team: 'JAX', number: '16', position: 'QB' },
-        { id: '2557997', name: 'Christian McCaffrey', team: 'SF', number: '23', position: 'RB' },
-        { id: '2566409', name: 'DeVonta Smith', team: 'PHI', number: '6', position: 'WR' },
-        { id: '2558266', name: 'George Kittle', team: 'SF', number: '85', position: 'TE' },
-    ]
+  // Full roster with all slots
+  const [roster, setRoster] = useState({
+    QB1: { id: '2558125', name: 'Patrick Mahomes', team: 'KC', number: '15', position: 'QB' },
+    QB2: { id: '2560955', name: 'Josh Allen', team: 'BUF', number: '17', position: 'QB' },
+    RB1: { id: '2560968', name: 'Saquon Barkley', team: 'NYG', number: '26', position: 'RB' },
+    RB2: { id: '2566448', name: 'Najee Harris', team: 'PIT', number: '22', position: 'RB' },
+    RB3: { id: '2567685', name: 'Dameon Pierce', team: 'HOU', number: '31', position: 'RB' },
+    RB4: { id: '2568348', name: 'Brian Robinson', team: 'WAS', number: '8', position: 'RB' },
+    WR1: { id: '2552608', name: 'Stefon Diggs', team: 'BUF', number: '14', position: 'WR' },
+    WR2: { id: '2565941', name: "Ja'Marr Chase", team: 'CIN', number: '1', position: 'WR' },
+    WR3: { id: '2556214', name: 'Tyreek Hill', team: 'MIA', number: '10', position: 'WR' },
+    WR4: { id: '2563848', name: 'CeeDee Lamb', team: 'DAL', number: '88', position: 'WR' },
+    TE1: { id: '2560957', name: 'Mark Andrews', team: 'BAL', number: '89', position: 'TE' },
+    TE2: { id: '2558266', name: 'George Kittle', team: 'SF', number: '85', position: 'TE' },
+    K: { id: '2536340', name: 'Justin Tucker', team: 'BAL', number: '9', position: 'K' },
+    'D/ST': { id: '100029', name: 'San Francisco', team: 'SF', number: '', position: 'D/ST' },
   });
 
-  const movePlayerToBench = (player, starterPosition) => {
-    setSquad(prev => {
-      const newSquad = { ...prev };
-      // Remove from starters
-      newSquad.starters[starterPosition] = null;
-      // Add to bench
-      newSquad.bench = [...prev.bench, player];
-      return newSquad;
-    });
-  };
-
-  const movePlayerToStarters = (player, benchIndex, starterPosition) => {
-    setSquad(prev => {
-      const newSquad = { ...prev };
-      // Remove from bench
-      newSquad.bench = prev.bench.filter((_, index) => index !== benchIndex);
-      // Add to starters
-      newSquad.starters[starterPosition] = player;
-      return newSquad;
-    });
-  };
+  // Starting lineup configuration
+  const [starters, setStarters] = useState({
+    QB: roster.QB1,
+    RB1: roster.RB1,
+    RB2: roster.RB2,
+    WR1: roster.WR1,
+    WR2: roster.WR2,
+    TE: roster.TE1,
+    FLEX: roster.RB3,
+    K: roster.K,
+    'D/ST': roster['D/ST'],
+  });
 
   const removePlayer = (player) => {
-    setSquad(prev => {
-      const newSquad = { ...prev };
-      // Remove from starters if present
-      Object.entries(newSquad.starters).forEach(([key, starter]) => {
-        if (starter?.id === player.id) {
-          newSquad.starters[key] = null;
+    // Remove from roster
+    setRoster(prev => {
+      const newRoster = { ...prev };
+      Object.entries(newRoster).forEach(([key, value]) => {
+        if (value?.id === player.id) {
+          newRoster[key] = null;
         }
       });
-      // Remove from bench if present
-      newSquad.bench = prev.bench.filter(benchPlayer => benchPlayer?.id !== player.id);
-      return newSquad;
+      return newRoster;
+    });
+
+    // Remove from starters if present
+    setStarters(prev => {
+      const newStarters = { ...prev };
+      Object.entries(newStarters).forEach(([key, value]) => {
+        if (value?.id === player.id) {
+          newStarters[key] = null;
+        }
+      });
+      return newStarters;
     });
   };
 
   const replacePlayer = (oldPlayer, newPlayer) => {
-    setSquad(prev => {
-      const newSquad = { ...prev };
-      // Replace in starters if present
-      Object.entries(newSquad.starters).forEach(([key, starter]) => {
-        if (starter?.id === oldPlayer.id) {
-          newSquad.starters[key] = newPlayer;
+    // Replace in roster
+    setRoster(prev => {
+      const newRoster = { ...prev };
+      Object.entries(newRoster).forEach(([key, value]) => {
+        if (value?.id === oldPlayer.id) {
+          newRoster[key] = newPlayer;
         }
       });
-      // Replace in bench if present
-      newSquad.bench = prev.bench.map(benchPlayer => 
-        benchPlayer?.id === oldPlayer.id ? newPlayer : benchPlayer
-      );
-      return newSquad;
+      return newRoster;
+    });
+
+    // Replace in starters if present
+    setStarters(prev => {
+      const newStarters = { ...prev };
+      Object.entries(newStarters).forEach(([key, value]) => {
+        if (value?.id === oldPlayer.id) {
+          newStarters[key] = newPlayer;
+        }
+      });
+      return newStarters;
     });
   };
 
+  const moveToStarters = (player, position) => {
+    setStarters(prev => ({
+      ...prev,
+      [position]: player
+    }));
+  };
+
+  const movePlayerToBench = (player, starterPosition) => {
+    setStarters(prev => ({
+      ...prev,
+      [starterPosition]: null
+    }));
+  };
+
+  // Helper function to get bench players (any rostered player not in starters)
+  const getBenchPlayers = () => {
+    const starterIds = new Set(
+      Object.values(starters)
+        .filter(player => player !== null)
+        .map(player => player.id)
+    );
+
+    return Object.values(roster)
+      .filter(player => player !== null && !starterIds.has(player.id));
+  };
+
   const value = {
-    squad,
-    movePlayerToBench,
-    movePlayerToStarters,
+    squad: {
+      roster,
+      starters,
+      bench: getBenchPlayers()
+    },
     removePlayer,
     replacePlayer,
+    moveToStarters,
+    movePlayerToBench,
   };
 
   return (

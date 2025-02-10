@@ -16,27 +16,45 @@ function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
     onClose();
   };
 
-  // Check if the player can be moved to starters
-  const canMoveToStarters = () => {
-    if (isStarter) return true; // Already a starter, can always move to bench
+  // Find all possible positions this player could move to
+  const getAvailablePositions = () => {
+    if (isStarter) return true; // Can always move to bench
+
+    const positions = [];
     
-    // Check available positions based on player's position
     switch (player.position) {
       case 'QB':
-        return !starters.QB;
+        if (!starters.QB) positions.push('QB');
+        break;
       case 'RB':
-        return !starters.RB1 || !starters.RB2 || !starters.FLEX;
+        if (!starters.RB1) positions.push('RB1');
+        if (!starters.RB2) positions.push('RB2');
+        if (!starters.FLEX || ['RB', 'WR', 'TE'].includes(starters.FLEX?.position)) {
+          positions.push('FLEX');
+        }
+        break;
       case 'WR':
-        return !starters.WR1 || !starters.WR2 || !starters.FLEX;
+        if (!starters.WR1) positions.push('WR1');
+        if (!starters.WR2) positions.push('WR2');
+        if (!starters.FLEX || ['RB', 'WR', 'TE'].includes(starters.FLEX?.position)) {
+          positions.push('FLEX');
+        }
+        break;
       case 'TE':
-        return !starters.TE || !starters.FLEX;
+        if (!starters.TE) positions.push('TE');
+        if (!starters.FLEX || ['RB', 'WR', 'TE'].includes(starters.FLEX?.position)) {
+          positions.push('FLEX');
+        }
+        break;
       case 'K':
-        return !starters.K;
+        if (!starters.K) positions.push('K');
+        break;
       case 'D/ST':
-        return !starters['D/ST'];
-      default:
-        return false;
+        if (!starters['D/ST']) positions.push('D/ST');
+        break;
     }
+
+    return positions.length > 0;
   };
 
   let playerHeadshot;
@@ -46,7 +64,11 @@ function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
     playerHeadshot = defaultHeadshot;
   }
 
-  const isMovePossible = isStarter || canMoveToStarters();
+  const isMovePossible = isStarter || getAvailablePositions();
+  const moveButtonText = isStarter ? 'Move to Bench' : 'Move to Starting';
+  const moveButtonTooltip = !isMovePossible 
+    ? `No available ${player.position} or FLEX positions` 
+    : '';
 
   return (
     <div style={{
@@ -136,9 +158,9 @@ function PlayerDetailOverlay({ player, onClose, onSubstitute, isStarter }) {
               fontSize: '1rem',
               fontWeight: 'bold'
             }}
-            title={!isMovePossible ? 'No available starting positions for this player' : ''}
+            title={moveButtonTooltip}
           >
-            {isStarter ? 'Move to Bench' : 'Move to Starting'}
+            {moveButtonText}
           </button>
           <button
             onClick={handleViewProfile}

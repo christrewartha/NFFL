@@ -1,0 +1,42 @@
+// Gameweeks from the Sleeper schedule: deadlines, byes, which week is open for changes.
+// The schedule only has dates, not kickoff times, so the deadline is a conservative
+// 12:00 UTC on the date of the week's first game (before any NFL kickoff, incl. London).
+
+const DEADLINE_HOUR_UTC = 12;
+
+export function weekInfo(schedule) {
+  const weeks = new Map();
+  for (const g of schedule) {
+    if (!weeks.has(g.week)) weeks.set(g.week, { week: g.week, firstDate: g.date, teams: new Set(), games: [] });
+    const w = weeks.get(g.week);
+    if (g.date < w.firstDate) w.firstDate = g.date;
+    w.teams.add(g.home);
+    w.teams.add(g.away);
+    w.games.push(g);
+  }
+  return [...weeks.values()]
+    .sort((a, b) => a.week - b.week)
+    .map((w) => {
+      const [y, m, d] = w.firstDate.split('-').map(Number);
+      return {
+        week: w.week,
+        deadline: Date.UTC(y, m - 1, d, DEADLINE_HOUR_UTC),
+        teams: w.teams,
+        complete: w.games.every((g) => g.status === 'complete'),
+      };
+    });
+}
+
+/** The first week whose deadline hasn't passed, or null once the season is over. */
+export function openWeek(weeks, now = Date.now()) {
+  return weeks.find((w) => w.deadline > now)?.week ?? null;
+}
+
+export function isBye(weeks, week, team) {
+  const w = weeks.find((x) => x.week === week);
+  return Boolean(w && team && !w.teams.has(team));
+}
+
+export function isWeekComplete(weeks, week) {
+  return Boolean(weeks.find((x) => x.week === week)?.complete);
+}

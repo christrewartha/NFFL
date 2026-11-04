@@ -1,0 +1,1132 @@
+{
+ "season": 2025,
+ "managers": 1000,
+ "variants": [
+  {
+   "name": "Uncapped prices",
+   "market": "uncapped",
+   "rules": {},
+   "byStyle": {
+    "active": {
+     "n": 450,
+     "mean": 2826.1,
+     "sd": 203.6,
+     "best": 3371.7,
+     "top10pct": 64,
+     "top1pct": 8,
+     "transfers": 33.5,
+     "hits": 6.4,
+     "value": 86.7
+    },
+    "stash": {
+     "n": 450,
+     "mean": 2752.3,
+     "sd": 208.1,
+     "best": 3313.6,
+     "top10pct": 35,
+     "top1pct": 2,
+     "transfers": 31.3,
+     "hits": 4.4,
+     "value": 86.7
+    },
+    "passive": {
+     "n": 100,
+     "mean": 2495.4,
+     "sd": 236.5,
+     "best": 3199.1,
+     "top10pct": 1,
+     "top1pct": 0,
+     "transfers": 0,
+     "hits": 0,
+     "value": 90.6
+    }
+   },
+   "spread": {
+    "mean": 2759.8,
+    "sd": 229.6,
+    "winner": 3371.7,
+    "winnerStyle": "active"
+   },
+   "earlyLateCorr": 0.46,
+   "stashPtsVsTotalCorr": 0.1,
+   "stashPtsMean": 129.4
+  },
+  {
+   "name": "Proposed: Up £0.3m / down £0.1m a week",
+   "market": "asym",
+   "rules": {},
+   "byStyle": {
+    "active": {
+     "n": 450,
+     "mean": 3113,
+     "sd": 170.8,
+     "best": 3608.5,
+     "top10pct": 78,
+     "top1pct": 9,
+     "transfers": 38.3,
+     "hits": 19.6,
+     "value": 104
+    },
+    "stash": {
+     "n": 450,
+     "mean": 2994.5,
+     "sd": 172.2,
+     "best": 3637.8,
+     "top10pct": 22,
+     "top1pct": 1,
+     "transfers": 36,
+     "hits": 12.8,
+     "value": 103.3
+    },
+    "passive": {
+     "n": 100,
+     "mean": 2495.4,
+     "sd": 236.5,
+     "best": 3199.1,
+     "top10pct": 0,
+     "top1pct": 0,
+     "transfers": 0,
+     "hits": 0,
+     "value": 95.4
+    }
+   },
+   "spread": {
+    "mean": 2997.9,
+    "sd": 251.5,
+    "winner": 3637.8,
+    "winnerStyle": "stash"
+   },
+   "earlyLateCorr": 0.47,
+   "stashPtsVsTotalCorr": 0.09,
+   "stashPtsMean": 128.7
+  },
+  {
+   "name": "Up/down £0.3m a week",
+   "market": "sym",
+   "rules": {},
+   "byStyle": {
+    "active": {
+     "n": 450,
+     "mean": 3053,
+     "sd": 185.9,
+     "best": 3704.4,
+     "top10pct": 75,
+     "top1pct": 9,
+     "transfers": 37.8,
+     "hits": 18.8,
+     "value": 97.1
+    },
+    "stash": {
+     "n": 450,
+     "mean": 2935.5,
+     "sd": 184.1,
+     "best": 3543.9,
+     "top10pct": 25,
+     "top1pct": 1,
+     "transfers": 35.5,
+     "hits": 12.5,
+     "value": 97.1
+    },
+    "passive": {
+     "n": 100,
+     "mean": 2495.4,
+     "sd": 236.5,
+     "best": 3199.1,
+     "top10pct": 0,
+     "top1pct": 0,
+     "transfers": 0,
+     "hits": 0,
+     "value": 90.8
+    }
+   },
+   "spread": {
+    "mean": 2944.4,
+    "sd": 248.8,
+    "winner": 3704.4,
+    "winnerStyle": "active"
+   },
+   "earlyLateCorr": 0.49,
+   "stashPtsVsTotalCorr": 0.1,
+   "stashPtsMean": 129
+  },
+  {
+   "name": "Proposed caps + no profit on sales",
+   "market": "asym",
+   "rules": {
+    "keepProfitShare": 0
+   },
+   "byStyle": {
+    "active": {
+     "n": 450,
+     "mean": 3063.2,
+     "sd": 174.8,
+     "best": 3556.5,
+     "top10pct": 82,
+     "top1pct": 8,
+     "transfers": 36.8,
+     "hits": 15.7,
+     "value": 95.5
+    },
+    "stash": {
+     "n": 450,
+     "mean": 2951.9,
+     "sd": 165.4,
+     "best": 3446.2,
+     "top10pct": 18,
+     "top1pct": 2,
+     "transfers": 34.6,
+     "hits": 9.7,
+     "value": 95.7
+    },
+    "passive": {
+     "n": 100,
+     "mean": 2495.4,
+     "sd": 236.5,
+     "best": 3199.1,
+     "top10pct": 0,
+     "top1pct": 0,
+     "transfers": 0,
+     "hits": 0,
+     "value": 92.6
+    }
+   },
+   "spread": {
+    "mean": 2956.3,
+    "sd": 240.9,
+    "winner": 3556.5,
+    "winnerStyle": "active"
+   },
+   "earlyLateCorr": 0.46,
+   "stashPtsVsTotalCorr": 0.15,
+   "stashPtsMean": 128.7
+  },
+  {
+   "name": "Proposed caps + 1 FT per week",
+   "market": "asym",
+   "rules": {
+    "freeTransfersPerWeek": 1
+   },
+   "byStyle": {
+    "active": {
+     "n": 450,
+     "mean": 3017.5,
+     "sd": 179.3,
+     "best": 3495,
+     "top10pct": 77,
+     "top1pct": 9,
+     "transfers": 29.8,
+     "hits": 51.2,
+     "value": 103.2
+    },
+    "stash": {
+     "n": 450,
+     "mean": 2905,
+     "sd": 177.6,
+     "best": 3393.5,
+     "top10pct": 22,
+     "top1pct": 1,
+     "transfers": 26.7,
+     "hits": 39.3,
+     "value": 102.6
+    },
+    "passive": {
+     "n": 100,
+     "mean": 2495.4,
+     "sd": 236.5,
+     "best": 3199.1,
+     "top10pct": 1,
+     "top1pct": 0,
+     "transfers": 0,
+     "hits": 0,
+     "value": 95.4
+    }
+   },
+   "spread": {
+    "mean": 2914.6,
+    "sd": 238,
+    "winner": 3495,
+    "winnerStyle": "active"
+   },
+   "earlyLateCorr": 0.42,
+   "stashPtsVsTotalCorr": 0.17,
+   "stashPtsMean": 128.7
+  },
+  {
+   "name": "Proposed caps + old format (9 starters + 6 bench, autosubs)",
+   "market": "asym",
+   "rules": {
+    "starterSlots": [
+     "QB",
+     "RB",
+     "RB",
+     "WR",
+     "WR",
+     "TE",
+     "FLEX",
+     "K",
+     "DEF"
+    ],
+    "benchSize": 6
+   },
+   "byStyle": {
+    "active": {
+     "n": 450,
+     "mean": 2241.4,
+     "sd": 139.9,
+     "best": 2594.3,
+     "top10pct": 44,
+     "top1pct": 4,
+     "transfers": 38.4,
+     "hits": 19.7,
+     "value": 104
+    },
+    "stash": {
+     "n": 450,
+     "mean": 2260.9,
+     "sd": 146.7,
+     "best": 2658.7,
+     "top10pct": 55,
+     "top1pct": 6,
+     "transfers": 36.1,
+     "hits": 12.9,
+     "value": 103.3
+    },
+    "passive": {
+     "n": 100,
+     "mean": 2014,
+     "sd": 176.9,
+     "best": 2503.8,
+     "top10pct": 1,
+     "top1pct": 0,
+     "transfers": 0,
+     "hits": 0,
+     "value": 95.5
+    }
+   },
+   "spread": {
+    "mean": 2227.4,
+    "sd": 163.6,
+    "winner": 2658.7,
+    "winnerStyle": "stash"
+   },
+   "earlyLateCorr": 0.37,
+   "stashPtsVsTotalCorr": -0.14,
+   "stashPtsMean": 35.3
+  }
+ ],
+ "markets": {
+  "uncapped": {
+   "label": "Uncapped prices",
+   "meanAbs": 0.19,
+   "big": 124,
+   "rises": [
+    {
+     "week": 18,
+     "name": "Jaxson Dart",
+     "pos": "QB",
+     "team": "NYG",
+     "from": 52,
+     "to": 80,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Keon Coleman",
+     "pos": "WR",
+     "team": "BUF",
+     "from": 55,
+     "to": 81,
+     "cause": ""
+    },
+    {
+     "week": 5,
+     "name": "Romeo Doubs",
+     "pos": "WR",
+     "team": "GB",
+     "from": 45,
+     "to": 71,
+     "cause": ""
+    },
+    {
+     "week": 3,
+     "name": "Rome Odunze",
+     "pos": "WR",
+     "team": "CHI",
+     "from": 73,
+     "to": 98,
+     "cause": ""
+    },
+    {
+     "week": 4,
+     "name": "Hunter Henry",
+     "pos": "TE",
+     "team": "NE",
+     "from": 40,
+     "to": 65,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Zay Flowers",
+     "pos": "WR",
+     "team": "BAL",
+     "from": 74,
+     "to": 98,
+     "cause": ""
+    },
+    {
+     "week": 3,
+     "name": "Wan'Dale Robinson",
+     "pos": "WR",
+     "team": "NYG",
+     "from": 50,
+     "to": 74,
+     "cause": ""
+    },
+    {
+     "week": 4,
+     "name": "Cam Skattebo",
+     "pos": "RB",
+     "team": "NYG",
+     "from": 55,
+     "to": 79,
+     "cause": ""
+    },
+    {
+     "week": 4,
+     "name": "Tre Tucker",
+     "pos": "WR",
+     "team": "LV",
+     "from": 45,
+     "to": 69,
+     "cause": ""
+    },
+    {
+     "week": 6,
+     "name": "Jacory Croskey-Merritt",
+     "pos": "RB",
+     "team": "WAS",
+     "from": 53,
+     "to": 77,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Javonte Williams",
+     "pos": "RB",
+     "team": "DAL",
+     "from": 66,
+     "to": 88,
+     "cause": ""
+    },
+    {
+     "week": 3,
+     "name": "Amon-Ra St. Brown",
+     "pos": "WR",
+     "team": "DET",
+     "from": 99,
+     "to": 121,
+     "cause": ""
+    }
+   ],
+   "falls": [
+    {
+     "week": 18,
+     "name": "Josh Allen",
+     "pos": "QB",
+     "team": "BUF",
+     "from": 110,
+     "to": 50,
+     "cause": ""
+    },
+    {
+     "week": 18,
+     "name": "DeVonta Smith",
+     "pos": "WR",
+     "team": "PHI",
+     "from": 73,
+     "to": 45,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Matthew Golden",
+     "pos": "WR",
+     "team": "GB",
+     "from": 72,
+     "to": 46,
+     "cause": ""
+    },
+    {
+     "week": 13,
+     "name": "Brock Purdy",
+     "pos": "QB",
+     "team": "SF",
+     "from": 89,
+     "to": 63,
+     "cause": ""
+    },
+    {
+     "week": 3,
+     "name": "Courtland Sutton",
+     "pos": "WR",
+     "team": "DEN",
+     "from": 94,
+     "to": 70,
+     "cause": ""
+    },
+    {
+     "week": 9,
+     "name": "Rachaad White",
+     "pos": "RB",
+     "team": "TB",
+     "from": 77,
+     "to": 53,
+     "cause": ""
+    },
+    {
+     "week": 12,
+     "name": "Justin Herbert",
+     "pos": "QB",
+     "team": "LAC",
+     "from": 99,
+     "to": 76,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Joe Burrow",
+     "pos": "QB",
+     "team": "CIN",
+     "from": 96,
+     "to": 74,
+     "cause": ""
+    }
+   ],
+   "paths": {
+    "Lamar Jackson": [
+     110,
+     110,
+     110,
+     110,
+     110,
+     110,
+     110,
+     100,
+     110,
+     110,
+     110,
+     103,
+     94,
+     91,
+     102,
+     88,
+     84,
+     81
+    ],
+    "Joe Burrow": [
+     96,
+     74,
+     65,
+     50,
+     50,
+     50,
+     50,
+     50,
+     50,
+     50,
+     50,
+     50,
+     53,
+     65,
+     76,
+     64,
+     86,
+     81
+    ],
+    "Mike Evans": [
+     97,
+     91,
+     82,
+     86,
+     75,
+     74,
+     87,
+     75,
+     61,
+     61,
+     62,
+     62,
+     61,
+     62,
+     64,
+     77,
+     77,
+     74
+    ],
+    "Bucky Irving": [
+     109,
+     104,
+     104,
+     101,
+     105,
+     98,
+     95,
+     91,
+     90,
+     92,
+     90,
+     89,
+     86,
+     89,
+     89,
+     88,
+     85,
+     85
+    ]
+   }
+  },
+  "asym": {
+   "label": "Up £0.3m / down £0.1m a week",
+   "meanAbs": 0.06,
+   "big": 0,
+   "rises": [
+    {
+     "week": 2,
+     "name": "Derrick Henry",
+     "pos": "RB",
+     "team": "BAL",
+     "from": 113,
+     "to": 116,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "CeeDee Lamb",
+     "pos": "WR",
+     "team": "DAL",
+     "from": 121,
+     "to": 124,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Puka Nacua",
+     "pos": "WR",
+     "team": "LAR",
+     "from": 110,
+     "to": 113,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Christian McCaffrey",
+     "pos": "RB",
+     "team": "SF",
+     "from": 115,
+     "to": 118,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Josh Jacobs",
+     "pos": "RB",
+     "team": "GB",
+     "from": 108,
+     "to": 111,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Josh Allen",
+     "pos": "QB",
+     "team": "BUF",
+     "from": 106,
+     "to": 109,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Garrett Wilson",
+     "pos": "WR",
+     "team": "NYJ",
+     "from": 92,
+     "to": 95,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Jaxon Smith-Njigba",
+     "pos": "WR",
+     "team": "SEA",
+     "from": 91,
+     "to": 94,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "James Cook III",
+     "pos": "RB",
+     "team": "BUF",
+     "from": 94,
+     "to": 97,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Chuba Hubbard",
+     "pos": "RB",
+     "team": "CAR",
+     "from": 93,
+     "to": 96,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Zay Flowers",
+     "pos": "WR",
+     "team": "BAL",
+     "from": 74,
+     "to": 77,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Marvin Harrison Jr.",
+     "pos": "WR",
+     "team": "ARI",
+     "from": 87,
+     "to": 90,
+     "cause": ""
+    }
+   ],
+   "falls": [
+    {
+     "week": 2,
+     "name": "Saquon Barkley",
+     "pos": "RB",
+     "team": "PHI",
+     "from": 125,
+     "to": 124,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Justin Jefferson",
+     "pos": "WR",
+     "team": "MIN",
+     "from": 125,
+     "to": 124,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Ja'Marr Chase",
+     "pos": "WR",
+     "team": "CIN",
+     "from": 125,
+     "to": 124,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Jahmyr Gibbs",
+     "pos": "RB",
+     "team": "DET",
+     "from": 122,
+     "to": 121,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Ashton Jeanty",
+     "pos": "RB",
+     "team": "LV",
+     "from": 115,
+     "to": 114,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Jonathan Taylor",
+     "pos": "RB",
+     "team": "IND",
+     "from": 112,
+     "to": 111,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Brian Thomas Jr.",
+     "pos": "WR",
+     "team": "JAX",
+     "from": 113,
+     "to": 112,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Bucky Irving",
+     "pos": "RB",
+     "team": "TB",
+     "from": 109,
+     "to": 108,
+     "cause": ""
+    }
+   ],
+   "paths": {
+    "Lamar Jackson": [
+     110,
+     110,
+     110,
+     110,
+     110,
+     110,
+     110,
+     109,
+     110,
+     110,
+     110,
+     109,
+     108,
+     107,
+     106,
+     105,
+     104,
+     103
+    ],
+    "Joe Burrow": [
+     96,
+     95,
+     94,
+     93,
+     92,
+     91,
+     90,
+     89,
+     88,
+     87,
+     86,
+     85,
+     84,
+     83,
+     82,
+     81,
+     84,
+     83
+    ],
+    "Mike Evans": [
+     97,
+     96,
+     95,
+     94,
+     93,
+     92,
+     91,
+     90,
+     89,
+     88,
+     87,
+     86,
+     85,
+     84,
+     83,
+     82,
+     81,
+     80
+    ],
+    "Bucky Irving": [
+     109,
+     108,
+     107,
+     106,
+     105,
+     104,
+     103,
+     102,
+     101,
+     100,
+     99,
+     98,
+     97,
+     96,
+     95,
+     94,
+     93,
+     92
+    ]
+   }
+  },
+  "sym": {
+   "label": "Up/down £0.3m a week",
+   "meanAbs": 0.1,
+   "big": 0,
+   "rises": [
+    {
+     "week": 2,
+     "name": "Derrick Henry",
+     "pos": "RB",
+     "team": "BAL",
+     "from": 113,
+     "to": 116,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "CeeDee Lamb",
+     "pos": "WR",
+     "team": "DAL",
+     "from": 121,
+     "to": 124,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Puka Nacua",
+     "pos": "WR",
+     "team": "LAR",
+     "from": 110,
+     "to": 113,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Christian McCaffrey",
+     "pos": "RB",
+     "team": "SF",
+     "from": 115,
+     "to": 118,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Josh Jacobs",
+     "pos": "RB",
+     "team": "GB",
+     "from": 108,
+     "to": 111,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Josh Allen",
+     "pos": "QB",
+     "team": "BUF",
+     "from": 106,
+     "to": 109,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Garrett Wilson",
+     "pos": "WR",
+     "team": "NYJ",
+     "from": 92,
+     "to": 95,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Jaxon Smith-Njigba",
+     "pos": "WR",
+     "team": "SEA",
+     "from": 91,
+     "to": 94,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "James Cook III",
+     "pos": "RB",
+     "team": "BUF",
+     "from": 94,
+     "to": 97,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Chuba Hubbard",
+     "pos": "RB",
+     "team": "CAR",
+     "from": 93,
+     "to": 96,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Zay Flowers",
+     "pos": "WR",
+     "team": "BAL",
+     "from": 74,
+     "to": 77,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Marvin Harrison Jr.",
+     "pos": "WR",
+     "team": "ARI",
+     "from": 87,
+     "to": 90,
+     "cause": ""
+    }
+   ],
+   "falls": [
+    {
+     "week": 2,
+     "name": "Saquon Barkley",
+     "pos": "RB",
+     "team": "PHI",
+     "from": 125,
+     "to": 122,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Justin Jefferson",
+     "pos": "WR",
+     "team": "MIN",
+     "from": 125,
+     "to": 122,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Ja'Marr Chase",
+     "pos": "WR",
+     "team": "CIN",
+     "from": 125,
+     "to": 122,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Jahmyr Gibbs",
+     "pos": "RB",
+     "team": "DET",
+     "from": 122,
+     "to": 119,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Ashton Jeanty",
+     "pos": "RB",
+     "team": "LV",
+     "from": 115,
+     "to": 112,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Jonathan Taylor",
+     "pos": "RB",
+     "team": "IND",
+     "from": 112,
+     "to": 109,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Brian Thomas Jr.",
+     "pos": "WR",
+     "team": "JAX",
+     "from": 113,
+     "to": 110,
+     "cause": ""
+    },
+    {
+     "week": 2,
+     "name": "Bucky Irving",
+     "pos": "RB",
+     "team": "TB",
+     "from": 109,
+     "to": 106,
+     "cause": ""
+    }
+   ],
+   "paths": {
+    "Lamar Jackson": [
+     110,
+     110,
+     110,
+     110,
+     110,
+     110,
+     110,
+     107,
+     110,
+     110,
+     110,
+     107,
+     104,
+     101,
+     102,
+     99,
+     96,
+     93
+    ],
+    "Joe Burrow": [
+     96,
+     93,
+     90,
+     87,
+     84,
+     81,
+     78,
+     75,
+     72,
+     69,
+     66,
+     63,
+     60,
+     63,
+     66,
+     64,
+     67,
+     70
+    ],
+    "Mike Evans": [
+     97,
+     94,
+     91,
+     88,
+     85,
+     82,
+     85,
+     82,
+     79,
+     76,
+     73,
+     70,
+     67,
+     64,
+     64,
+     67,
+     70,
+     73
+    ],
+    "Bucky Irving": [
+     109,
+     106,
+     104,
+     101,
+     104,
+     101,
+     98,
+     95,
+     92,
+     92,
+     90,
+     89,
+     86,
+     89,
+     89,
+     88,
+     85,
+     85
+    ]
+   }
+  }
+ }
+}

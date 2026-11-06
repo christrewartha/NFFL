@@ -40,3 +40,19 @@ export function isBye(weeks, week, team) {
 export function isWeekComplete(weeks, week) {
   return Boolean(weeks.find((x) => x.week === week)?.complete);
 }
+
+/**
+ * A team's season week by week: { week, opponent, home, status } or { week, bye: true }.
+ * status is Sleeper's game status ('pre_game', 'in_game', 'complete') when the schedule has it.
+ */
+export function teamFixtures(schedule, team) {
+  const total = Math.max(0, ...schedule.map((g) => g.week));
+  const games = new Map();
+  for (const g of schedule) {
+    if (g.home === team) games.set(g.week, { opponent: g.away, home: true, status: g.status });
+    else if (g.away === team) games.set(g.week, { opponent: g.home, home: false, status: g.status });
+  }
+  return Array.from({ length: total }, (_, i) => ({ week: i + 1, ...(games.get(i + 1) ?? { bye: true }) }));
+}
+
+export const fixtureLabel = (f) => (!f ? '' : f.bye ? 'BYE' : `${f.home ? 'v' : '@'} ${f.opponent}`);

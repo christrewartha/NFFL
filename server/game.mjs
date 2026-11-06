@@ -8,11 +8,21 @@ import { newTeam, rollover, scoreWeek } from '../src/core/squad.js';
 
 const seasons = new Map();
 
-/** The replayed season (capped prices), built once per season and kept in memory. */
-export async function seasonWeeks(season) {
-  if (!seasons.has(season)) seasons.set(season, replaySeason(await loadSeason(season)));
+async function loadReplay(season) {
+  if (!seasons.has(season)) {
+    const data = await loadSeason(season);
+    seasons.set(season, {
+      weeks: replaySeason(data),
+      // The fixture list is public knowledge (as in a real season), so it's safe to send.
+      schedule: data.schedule.map(({ week, home, away }) => ({ week, home, away })),
+    });
+  }
   return seasons.get(season);
 }
+
+/** The replayed season (capped prices), built once per season and kept in memory. */
+export const seasonWeeks = async (season) => (await loadReplay(season)).weeks;
+export const seasonSchedule = async (season) => (await loadReplay(season)).schedule;
 
 export function clock(league, totalWeeks, now = Date.now()) {
   const weeks = leagueWeeks({ startDate: league.start_date, deadlineTime: league.deadline_time, weeks: totalWeeks }, now);

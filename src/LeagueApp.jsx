@@ -9,6 +9,7 @@ import JoinView from './components/JoinView.jsx';
 import LeagueView from './components/LeagueView.jsx';
 import { DraftBar } from './components/DraftBar.jsx';
 import { useDraft } from './components/useDraft.js';
+import { SeasonContext } from './components/season.js';
 
 const LEAGUE_TABS = [...TABS.slice(0, 3), { id: 'league', label: 'League', icon: '🏆' }, TABS[3]];
 
@@ -57,6 +58,11 @@ export default function LeagueApp() {
 
   const getScores = useCallback((week) => api(`/api/scores?week=${week}`), [api]);
   const playersById = useMemo(() => new Map((state?.market.players ?? []).map((p) => [p.id, p])), [state]);
+  const season = useMemo(() => ({
+    schedule: state?.schedule ?? [],
+    week: state?.week ?? null,
+    getLog: (p) => api(`/api/log?id=${encodeURIComponent(p.id)}`),
+  }), [state?.schedule, state?.week, api]);
 
   // Edits stay in this draft until the manager reviews and confirms them.
   const draftState = useDraft(state?.team ?? null, playersById, async (intent) => {
@@ -109,7 +115,7 @@ export default function LeagueApp() {
   );
   return (
     <Shell subtitle="League" notice={notice} tabs={LEAGUE_TABS} tab={tab} setTab={setTab}>
-      {body}
+      <SeasonContext.Provider value={season}>{body}</SeasonContext.Provider>
       {state?.week && <DraftBar draftState={draftState} />}
     </Shell>
   );

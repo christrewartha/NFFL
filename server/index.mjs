@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkPin, openStore } from './store.mjs';
-import { clock, currentTeam, results, seasonWeeks } from './game.mjs';
+import { clock, currentTeam, results, seasonSchedule, seasonWeeks } from './game.mjs';
 import { applyChanges } from '../src/core/squad.js';
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -97,8 +97,22 @@ const routes = {
       weeks: c.weeks,
       week: c.open,
       market: { season: league.season, week: c.open, players: c.open ? season[c.open - 1].market : [] },
+      schedule: await seasonSchedule(league.season),
       team,
     };
+  },
+
+  // One player's results, for weeks whose deadline has passed only.
+  'GET /api/log': async (req, url) => {
+    const { manager, league } = auth(req);
+    const { season, c } = await context(manager, league);
+    const id = url.searchParams.get('id');
+    return c.weeks
+      .filter((w) => w.complete)
+      .flatMap(({ week }) => {
+        const s = season[week - 1].scores[id];
+        return s ? [{ week, pts: s.pts, played: s.played }] : [];
+      });
   },
 
   // Save a batch of changes the manager has reviewed and confirmed. All or nothing.

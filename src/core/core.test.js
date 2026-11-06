@@ -284,3 +284,16 @@ test('applyChanges: sells then buys, keeps buy price on a buy-back, and refuses 
   const rb = ids.find((id) => team.info[id].pos === 'RB' && id !== team.captain && id !== team.vice);
   assert.equal(changeSummary(team, applyChanges(team, { squad: ids, captain: rb }, byId)).captain, true);
 });
+
+test('teamFixtures: home/away by week, gaps are byes', async () => {
+  const { teamFixtures, fixtureLabel } = await import('./gameweeks.js');
+  const schedule = [
+    { week: 1, home: 'KC', away: 'BUF', status: 'complete' },
+    { week: 3, home: 'DEN', away: 'KC' },
+    { week: 3, home: 'BUF', away: 'MIA' },
+  ];
+  const kc = teamFixtures(schedule, 'KC');
+  assert.deepEqual(kc.map(fixtureLabel), ['v BUF', 'BYE', '@ DEN']);
+  assert.equal(teamFixtures(schedule, 'BUF')[1].bye, true);
+  assert.equal(kc[0].status, 'complete');
+});

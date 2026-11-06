@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import PlayerAvatar from './PlayerAvatar.jsx';
 import PlayerSheet from './PlayerSheet.jsx';
+import FixtureGrid from './FixtureGrid.jsx';
 import { injuryShort, playerFor, shortName } from './lookup.js';
 import { RULES, fmtPrice, fmtPts } from '../core/rules.js';
 import {
@@ -31,6 +32,7 @@ export function deadlineParts(weeks, week) {
 export default function TeamView({ team, actions: teamActions, playersById, weeks, openMarket }) {
   const [sheetLoc, setSheetLoc] = useState(null);
   const [swapFrom, setSwapFrom] = useState(null);
+  const [view, setView] = useState('pitch');
 
   const at = (loc) => team[loc.list][loc.index];
   const player = (id) => playerFor(id, team, playersById);
@@ -114,12 +116,21 @@ export default function TeamView({ team, actions: teamActions, playersById, week
       )}
       {swapFrom && <div className="notice">Tap a highlighted spot to swap, or anywhere else to cancel.</div>}
 
-      <div className="pitch">
-        {PITCH_ROWS.map((row, i) => (
-          <div className="pitch-row" key={i}>{row.map((index) => spot({ list: 'starters', index }))}</div>
-        ))}
+      <div className="segmented">
+        <button className={view === 'pitch' ? 'active' : ''} onClick={() => setView('pitch')}>Pitch</button>
+        <button className={view === 'fixtures' ? 'active' : ''} onClick={() => setView('fixtures')}>Fixtures &amp; byes</button>
       </div>
-      {HAS_BENCH && (
+
+      {view === 'fixtures' ? (
+        <FixtureGrid team={team} playersById={playersById} onSelect={setSheetLoc} />
+      ) : (
+        <div className="pitch">
+          {PITCH_ROWS.map((row, i) => (
+            <div className="pitch-row" key={i}>{row.map((index) => spot({ list: 'starters', index }))}</div>
+          ))}
+        </div>
+      )}
+      {HAS_BENCH && view === 'pitch' && (
         <>
           <div className="bench-label muted small">Bench (autosub order, left to right)</div>
           <div className="bench">{team.bench.map((_, index) => spot({ list: 'bench', index }))}</div>

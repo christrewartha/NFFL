@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import PlayerAvatar from './PlayerAvatar.jsx';
 import PlayerSheet from './PlayerSheet.jsx';
+import { byeWeek, useFixtures } from './season.js';
 import { injuryShort, playerFor } from './lookup.js';
 import { POSITIONS, RULES, SLOT_ELIGIBLE, fmtPrice, fmtPts } from '../core/rules.js';
 import {
@@ -25,6 +26,7 @@ export default function MarketView({ team, actions: teamActions, market, players
 
   const owned = new Set(squadIds(team));
   const counts = countBy(team, 'pos');
+  const fixturesOf = useFixtures();
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -107,6 +109,7 @@ export default function MarketView({ team, actions: teamActions, market, players
                   <span className="muted small">
                     <span className={`pos-tag pos-${p.pos}`}>{p.pos}</span> {p.team}
                     {p.opponent && ` · ${p.opponent === 'BYE' ? 'BYE' : `v ${p.opponent}`}`}
+                    {byeWeek(fixturesOf(p.team)) && ` · bye wk ${byeWeek(fixturesOf(p.team))}`}
                   </span>
                 </span>
               </button>

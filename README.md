@@ -81,6 +81,7 @@ npm start                                       # http://localhost:8787
 - **Prices:** the replay pricing, with injured players priced on form and weekly moves capped (`PRICE_MOVES`).
 - **Changes are drafted, then confirmed.** Transfers and armband changes stay in a local draft. Nothing reaches the server until the manager reviews and confirms them: out/in at their prices, free transfers used, points cost and bank before/after. The server applies the batch all-or-nothing with the same `applyChanges` the preview uses, and refuses a half-finished transfer. If a deadline passes mid-draft, the draft is discarded and the manager is told. Solo play works the same way.
 - **League tab:** the table, plus each rival's team from the last locked week.
+- **Game log and byes:** tap *Season* on a player's sheet to see his whole season: points for weeks already played, then fixtures still to come. The Team tab's *Fixtures & byes* view shows the squad against the next 6 weeks, with byes highlighted and counted, because a player on bye scores zero with no bench. The server only sends results for weeks whose deadline has passed.
 - **Storage:** one SQLite file, `server/nffl.db`, using Node's built-in `node:sqlite` (Node 24). See *Backups* below.
 - **Dev:** `npm run dev` proxies `/api` to a local server, so `http://localhost:5173/league` works for UI work.
 

@@ -99,3 +99,12 @@ export async function fetchWeekScores(season, week, { fetchFn = globalThis.fetch
   for (const r of rows) out[r.player_id] = { pts: pts(r.stats) ?? 0, played: (r.stats?.gp ?? 0) > 0 };
   return out;
 }
+
+/** One player's game log for a season: [{ week, pts, played }], weeks he has stats for. */
+export async function fetchPlayerLog(season, id, { fetchFn = globalThis.fetch.bind(globalThis) } = {}) {
+  const data = await getJson(fetchFn, `/stats/nfl/player/${id}?season_type=regular&season=${season}&grouping=week`);
+  return Object.values(data ?? {})
+    .filter((r) => r?.stats)
+    .map((r) => ({ week: Number(r.week), pts: pts(r.stats) ?? 0, played: (r.stats.gp ?? 0) > 0 }))
+    .sort((a, b) => a.week - b.week);
+}

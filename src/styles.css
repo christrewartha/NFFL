@@ -164,6 +164,30 @@ button.mini { width: 30px; height: 30px; border-radius: 50%; padding: 0; font-si
 .week-table td:first-child { width: 48px; font-size: 12px; }
 .bench-row { opacity: 0.6; }
 
+/* View toggle */
+.segmented { display: flex; gap: 6px; margin: 8px 0; }
+.segmented button { flex: 1; padding: 8px 0; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; }
+.segmented button.active { background: var(--surface-2); border-color: var(--accent); color: var(--accent); }
+
+/* Fixtures & byes */
+.fixture-grid { overflow-x: auto; }
+.fixture-grid table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.fixture-grid th { font-weight: 600; padding: 4px 2px; text-align: center; white-space: nowrap; }
+.fixture-grid td { padding: 6px 2px; border-top: 1px solid var(--border); text-align: center; white-space: nowrap; }
+.fixture-grid td.fg-player { text-align: left; max-width: 120px; overflow: hidden; text-overflow: ellipsis; padding-right: 6px; }
+.fixture-grid tbody tr { cursor: pointer; }
+.fixture-grid td.bye { background: rgba(240, 98, 98, 0.18); color: var(--danger); font-weight: 700; }
+.bye-count { display: block; font-size: 10px; font-weight: 400; color: var(--muted); }
+.bye-count.has-byes { color: var(--danger); font-weight: 700; }
+.sheet-stats .stat-button { cursor: pointer; border: 1px solid var(--border); }
+.sheet-stats .stat-button.open { border-color: var(--accent); }
+.stat-hint { color: var(--accent); font-size: 10px; float: right; }
+.log-table { margin-bottom: 14px; }
+.log-table td:first-child { white-space: nowrap; }
+.log-table .bye-row td { color: var(--danger); }
+.log-table .current-row td { background: rgba(60, 207, 122, 0.1); }
+.log-table .future-row td { color: var(--muted); }
+
 /* Pending changes */
 .draft-bar {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(62px + env(safe-area-inset-bottom));

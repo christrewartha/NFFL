@@ -260,6 +260,22 @@ test('league clock: daily UK deadlines across the clocks going back', async () =
   assert.equal(leagueOpenWeek(weeks), 3);
 });
 
+test('league clock: offline for the update window after each deadline', async () => {
+  const { leagueWeeks, leagueOpenWeek, leagueUpdating, ukTime } = await import('./league.js');
+  const at = (time) => leagueWeeks({ startDate: '2026-11-10', deadlineTime: '22:00', weeks: 3, updateMinutes: 60 }, ukTime('2026-11-11', time));
+  // 21:59 on day 2: week 1 is done, week 2 still open.
+  let weeks = at('21:59');
+  assert.deepEqual([leagueOpenWeek(weeks), leagueUpdating(weeks)?.week ?? null], [2, null]);
+  // 22:30: week 2 locked and being processed; its results aren't out yet.
+  weeks = at('22:30');
+  assert.equal(leagueUpdating(weeks).week, 2);
+  assert.equal(weeks[1].complete, false);
+  assert.equal(new Date(leagueUpdating(weeks).reopens).toISOString(), '2026-11-11T23:00:00.000Z');
+  // 23:00: results out, week 3 open.
+  weeks = at('23:00');
+  assert.deepEqual([leagueOpenWeek(weeks), leagueUpdating(weeks), weeks[1].complete], [3, null, true]);
+});
+
 test('applyChanges: sells then buys, keeps buy price on a buy-back, and refuses half transfers', async () => {
   const { applyChanges, changeSummary, squadIds } = await import('./squad.js');
   let { team, players } = fullSquad();

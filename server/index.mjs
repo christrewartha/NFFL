@@ -91,9 +91,14 @@ const routes = {
   'GET /api/state': async (req) => {
     const { manager, league } = auth(req);
     const { season, c, team } = await context(manager, league);
-    return {
+    const about = {
       league: { code: league.code, name: league.name, season: league.season },
       me: { id: manager.id, name: manager.name },
+    };
+    // While a week is being processed the league is offline: just say when it's back.
+    if (c.updating) return { ...about, updating: { week: c.updating.week, deadline: c.updating.deadline, reopens: c.updating.reopens } };
+    return {
+      ...about,
       weeks: c.weeks,
       week: c.open,
       market: { season: league.season, week: c.open, players: c.open ? season[c.open - 1].market : [] },
@@ -119,6 +124,7 @@ const routes = {
   'POST /api/commit': async (req) => {
     const { manager, league } = auth(req);
     const { season, c, team } = await context(manager, league);
+    if (c.updating) throw new HttpError(409, `The Week ${c.updating.week} deadline has passed and it's being processed. Your changes weren't saved.`);
     if (!c.open) throw new HttpError(409, 'The season is over');
     const { squad, captain = null, vice = null } = await body(req);
     const ids = Array.isArray(squad) ? squad.filter((id) => typeof id === 'string') : null;
@@ -138,7 +144,7 @@ const routes = {
     const { manager, league } = auth(req);
     const { season, c } = await context(manager, league);
     const week = Number(url.searchParams.get('week'));
-    if (!c.weeks[week - 1]?.complete) throw new HttpError(403, "That week's deadline hasn't passed yet");
+    if (!c.weeks[week - 1]?.complete) throw new HttpError(403, "That week's results aren't out yet");
     return season[week - 1].scores;
   },
 
@@ -147,8 +153,8 @@ const routes = {
     const season = await seasonWeeks(league.season);
     const standings = [];
     for (const m of store.managers(league.code)) {
-      const { team } = await context(m, league);
-      const weekly = results(team, season);
+      const { team, c } = await context(m, league);
+      const weekly = results(team, season, c);
       const latest = weekly.at(-1);
       standings.push({
         id: m.id,
@@ -184,6 +190,29 @@ async function serveStatic(res, pathname) {
     res.end(html);
   }
 }
+
+// --- Deadlines -------------------------------------------------------------------
+// When a deadline passes, lock every team for that week straight away (rather than as
+// each manager next opens the app), while the league is offline for its update window.
+const processed = new Set();
+async function processDeadlines() {
+  for (const league of store.leagues()) {
+    try {
+      const season = await seasonWeeks(league.season);
+      const { updating } = clock(league, season.length);
+      const key = `${league.code}:${updating?.week}`;
+      if (!updating || processed.has(key)) continue;
+      const managers = store.managers(league.code);
+      for (const m of managers) await context(m, league);
+      processed.add(key);
+      const back = new Date(updating.reopens).toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' });
+      console.log(`${new Date().toISOString()} ${league.name}: week ${updating.week} locked for ${managers.length} team(s), back at ${back}`);
+    } catch (e) {
+      console.error(`Processing deadline for ${league.code} failed:`, e);
+    }
+  }
+}
+setInterval(processDeadlines, 30 * 1000);
 
 createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');

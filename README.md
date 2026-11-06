@@ -72,13 +72,14 @@ Play a past season with friends, one gameweek a day. The server holds the season
 npm install
 npm run build                                   # the server serves the built app from dist/
 node scripts/fetch-season.mjs 2022              # once per season you want to replay
-npm run admin -- create --name "The Crew" --season 2022 --start 2026-11-10 --deadline 20:00
+npm run admin -- create --name "The Crew" --season 2022 --start 2026-11-10 --deadline 22:00 --update 60
 npm start                                       # http://localhost:8787
 ```
 
-`create` prints a six-letter league code. Send your friends `https://your.domain/?code=XXXXXX`. They pick a name and a 4–8 digit PIN, and use the same name and PIN to sign back in. Other admin commands: `npm run admin -- list`, `managers <CODE>`, `reset-pin <CODE> <name> <pin>`.
+`create` prints a six-letter league code. Send your friends `https://your.domain/?code=XXXXXX`. They pick a name and a 4–8 digit PIN, and use the same name and PIN to sign back in. Other admin commands: `npm run admin -- list`, `managers <CODE>`, `reset-pin <CODE> <name> <pin>`, and `set <CODE> [--start YYYY-MM-DD] [--deadline HH:MM] [--update MINUTES]` to change a league's schedule.
 
-- **Clock:** week 1's deadline is `--deadline` (UK time) on `--start`. Each later week is the same time on the next day, so a season takes 18 days. Before week 1 everyone builds their squad with unlimited free transfers. Someone who joins late starts in the current week.
+- **Clock:** week 1's deadline is `--deadline` (UK time, default 22:00) on `--start`. Each later week is the same time on the next day, so a season takes 18 days.
+- **Update window:** at each deadline, teams lock and the league goes offline for `--update` minutes (default 60). The app shows an *Updating* screen with a countdown and refuses changes, and the server locks every team for the week. When the window ends, the week's points, the new prices and the next week appear together, and open apps refresh themselves. Before week 1 everyone builds their squad with unlimited free transfers. Someone who joins late starts in the current week.
 - **Prices:** the replay pricing, with injured players priced on form and weekly moves capped (`PRICE_MOVES`).
 - **Changes are drafted, then confirmed.** Transfers and armband changes stay in a local draft. Nothing reaches the server until the manager reviews and confirms them: out/in at their prices, free transfers used, points cost and bank before/after. The server applies the batch all-or-nothing with the same `applyChanges` the preview uses, and refuses a half-finished transfer. If a deadline passes mid-draft, the draft is discarded and the manager is told. Solo play works the same way.
 - **League tab:** the table, plus each rival's team from the last locked week.

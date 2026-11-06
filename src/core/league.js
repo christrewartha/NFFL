@@ -25,14 +25,22 @@ const addDays = (date, n) => {
 
 /**
  * Deadlines for a league: week 1 at `deadlineTime` (UK) on `startDate`, then one week a
- * day at the same clock time. A week's scores are revealed as soon as its deadline passes.
+ * day at the same clock time. At each deadline teams lock and the league goes offline
+ * for `updateMinutes` while the week is processed. Then the results appear and the next
+ * week opens.
+ *   locked:   the deadline has passed (no more changes)
+ *   complete: the update window is over (results are public)
  */
-export function leagueWeeks({ startDate, deadlineTime, weeks }, now = Date.now()) {
+export function leagueWeeks({ startDate, deadlineTime, weeks, updateMinutes = 0 }, now = Date.now()) {
   return Array.from({ length: weeks }, (_, i) => {
     const deadline = ukTime(addDays(startDate, i), deadlineTime);
-    return { week: i + 1, deadline, complete: deadline <= now };
+    const reopens = deadline + updateMinutes * 60 * 1000;
+    return { week: i + 1, deadline, reopens, locked: deadline <= now, complete: reopens <= now };
   });
 }
 
 /** The week open for changes, or null once the last deadline has passed. */
-export const leagueOpenWeek = (weeks) => weeks.find((w) => !w.complete)?.week ?? null;
+export const leagueOpenWeek = (weeks) => weeks.find((w) => !w.locked)?.week ?? null;
+
+/** The week currently being processed (locked, results not yet out), or null. */
+export const leagueUpdating = (weeks) => weeks.find((w) => w.locked && !w.complete) ?? null;

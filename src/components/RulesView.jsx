@@ -26,7 +26,7 @@ export default function RulesView({ league = false, children }) {
         <li><strong>Transfers</strong> Unlimited and free until your first deadline. Then {RULES.freeTransfersPerWeek} free per week, banking up to {RULES.maxBankedTransfers}. Each extra costs {RULES.hitCost} pts.</li>
         <li><strong>Selling</strong> You keep {RULES.keepProfitShare === 0.5 ? 'half' : `${RULES.keepProfitShare * 100}%`} of any price rise (rounded down), and take the whole of any fall.</li>
         {league ? (
-          <li><strong>Deadline</strong> One gameweek a day. Each week's scores appear as soon as its deadline passes, and the next week opens.</li>
+          <li><strong>Deadline</strong> One gameweek a day. At each deadline teams lock and the league goes offline for a while to process the week. When it's back, the week's points, the new prices and the next week are all ready.</li>
         ) : (
           <li><strong>Deadline</strong> 12:00 UTC on the day of each week's first game.</li>
         )}

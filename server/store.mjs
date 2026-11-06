@@ -32,10 +32,15 @@ export function openStore(path) {
     );
   `);
 
+  // Columns added after the first release, for databases created before them.
+  const leagueColumns = db.prepare('PRAGMA table_info(leagues)').all().map((c) => c.name);
+  if (!leagueColumns.includes('update_minutes')) db.exec('ALTER TABLE leagues ADD COLUMN update_minutes INTEGER NOT NULL DEFAULT 60');
+
   const q = {
     league: db.prepare('SELECT * FROM leagues WHERE code = ?'),
     leagues: db.prepare('SELECT * FROM leagues ORDER BY created_at'),
-    addLeague: db.prepare('INSERT INTO leagues (code, name, season, start_date, deadline_time, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
+    addLeague: db.prepare('INSERT INTO leagues (code, name, season, start_date, deadline_time, update_minutes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'),
+    setSchedule: db.prepare('UPDATE leagues SET start_date = ?, deadline_time = ?, update_minutes = ? WHERE code = ?'),
     manager: db.prepare('SELECT * FROM managers WHERE id = ?'),
     managerByName: db.prepare('SELECT * FROM managers WHERE league_code = ? AND name_key = ?'),
     managers: db.prepare('SELECT * FROM managers WHERE league_code = ? ORDER BY created_at'),
@@ -52,7 +57,8 @@ export function openStore(path) {
   return {
     league: (code) => q.league.get(code),
     leagues: () => q.leagues.all(),
-    addLeague: ({ code, name, season, startDate, deadlineTime }) => q.addLeague.run(code, name, season, startDate, deadlineTime, Date.now()),
+    addLeague: ({ code, name, season, startDate, deadlineTime, updateMinutes = 60 }) => q.addLeague.run(code, name, season, startDate, deadlineTime, updateMinutes, Date.now()),
+    setSchedule: (code, { startDate, deadlineTime, updateMinutes }) => q.setSchedule.run(startDate, deadlineTime, updateMinutes, code),
     manager: (id) => withTeam(q.manager.get(id)),
     managerByName: (code, name) => withTeam(q.managerByName.get(code, nameKey(name))),
     managers: (code) => q.managers.all(code).map(withTeam),

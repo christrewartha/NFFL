@@ -10,6 +10,7 @@ import LeagueView from './components/LeagueView.jsx';
 import { DraftBar } from './components/DraftBar.jsx';
 import { useDraft } from './components/useDraft.js';
 import { SeasonContext } from './components/season.js';
+import UpdatingView from './components/UpdatingView.jsx';
 
 const LEAGUE_TABS = [...TABS.slice(0, 3), { id: 'league', label: 'League', icon: '🏆' }, TABS[3]];
 
@@ -48,16 +49,19 @@ export default function LeagueApp() {
     return () => document.removeEventListener('visibilitychange', onFocus);
   }, [refresh]);
 
-  // Reload just after the deadline so results and the new week appear.
+  // Reload just after the next deadline (to go offline) or the end of the update window
+  // (to come back). If that moment has already passed, the server is a little behind this
+  // device's clock, so check again shortly rather than in a tight loop.
   useEffect(() => {
-    const next = state?.weeks.find((w) => !w.complete);
-    if (!next) return;
-    const timer = setTimeout(refresh, Math.min(next.deadline - Date.now() + 2000, 2 ** 31 - 1));
+    const at = state?.updating ? state.updating.reopens : state?.weeks?.find((w) => !w.locked)?.deadline;
+    if (!at) return undefined;
+    const wait = at > Date.now() ? at - Date.now() + 2000 : 15000;
+    const timer = setTimeout(refresh, Math.min(wait, 2 ** 31 - 1));
     return () => clearTimeout(timer);
   }, [state, refresh]);
 
   const getScores = useCallback((week) => api(`/api/scores?week=${week}`), [api]);
-  const playersById = useMemo(() => new Map((state?.market.players ?? []).map((p) => [p.id, p])), [state]);
+  const playersById = useMemo(() => new Map((state?.market?.players ?? []).map((p) => [p.id, p])), [state]);
   const season = useMemo(() => ({
     schedule: state?.schedule ?? [],
     week: state?.week ?? null,
@@ -82,6 +86,14 @@ export default function LeagueApp() {
     setToken(null);
     setState(null);
   };
+
+  if (state?.updating) {
+    return (
+      <Shell subtitle="League" notice={draftState.notice && <div className="error small">{draftState.notice}</div>}>
+        <UpdatingView league={state.league} updating={state.updating} />
+      </Shell>
+    );
+  }
 
   let body;
   if (!state) {

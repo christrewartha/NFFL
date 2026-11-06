@@ -9,7 +9,8 @@
     "preview": "vite preview --host",
     "test": "node --test",
     "start": "node server/index.mjs",
-    "admin": "node server/admin.mjs"
+    "admin": "node server/admin.mjs",
+    "backup": "node server/backup.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",

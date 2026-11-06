@@ -81,8 +81,40 @@ npm start                                       # http://localhost:8787
 - **Prices:** the replay pricing, with injured players priced on form and weekly moves capped (`PRICE_MOVES`).
 - **Changes are drafted, then confirmed.** Transfers and armband changes stay in a local draft. Nothing reaches the server until the manager reviews and confirms them: out/in at their prices, free transfers used, points cost and bank before/after. The server applies the batch all-or-nothing with the same `applyChanges` the preview uses, and refuses a half-finished transfer. If a deadline passes mid-draft, the draft is discarded and the manager is told. Solo play works the same way.
 - **League tab:** the table, plus each rival's team from the last locked week.
-- **Storage:** one SQLite file, `server/nffl.db`, using Node's built-in `node:sqlite` (Node 24). To back up, copy `server/nffl.db*` while the server is stopped.
+- **Storage:** one SQLite file, `server/nffl.db`, using Node's built-in `node:sqlite` (Node 24). See *Backups* below.
 - **Dev:** `npm run dev` proxies `/api` to a local server, so `http://localhost:5173/league` works for UI work.
+
+### Backups
+
+`npm run backup` copies the database into `backups/` as `nffl-YYYYMMDD-HHMMSS.db`. It uses SQLite's online backup, so the server keeps running and the copy is consistent even mid-write. Each copy is integrity-checked, and copies older than 14 days are deleted (`--keep N` to change, `--dir` for another folder).
+
+**Run it nightly** with `crontab -e`:
+
+```
+30 3 * * * cd $HOME/NFFL && /usr/bin/node server/backup.mjs >> backups/backup.log 2>&1
+```
+
+**Copy backups off the machine** so a dead drive doesn't take them too. [rclone](https://rclone.org) works with Google Drive, OneDrive, Dropbox and others:
+
+1. `sudo apt install rclone`, then `rclone config`: choose *New remote*, call it `cloud`, and pick your provider.
+2. When it asks *Use web browser to automatically authenticate?*, answer **n**. It will tell you to run `rclone authorize "<provider>"` on a computer with a browser (install rclone on your PC for this). Paste the token it gives you back into the server.
+3. Extend the cron line so each backup is uploaded after it's made:
+
+```
+30 3 * * * cd $HOME/NFFL && /usr/bin/node server/backup.mjs >> backups/backup.log 2>&1 && /usr/bin/rclone copy backups cloud:nffl-backups --include "nffl-*.db" >> backups/backup.log 2>&1
+```
+
+`rclone copy` never deletes, so the cloud folder keeps every backup. Each one is tiny.
+
+**Restore** a backup:
+
+```sh
+sudo systemctl stop nffl
+cp server/nffl.db server/nffl.db.before-restore      # just in case
+rm -f server/nffl.db-wal server/nffl.db-shm
+cp backups/nffl-20261107-033000.db server/nffl.db
+sudo systemctl start nffl
+```
 
 ### Hosting it from home
 

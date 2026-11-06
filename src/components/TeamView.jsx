@@ -5,7 +5,7 @@ import FixtureGrid from './FixtureGrid.jsx';
 import { injuryShort, playerFor, shortName } from './lookup.js';
 import { RULES, fmtPrice, fmtPts } from '../core/rules.js';
 import {
-  canCaptain, canSwap, freeTransfersLeft, isBuildingWeek, isComplete, pendingHits, sellValue, squadIds,
+  canCaptain, canSwap, freeTransfersLeft, isFreePosition, isBuildingWeek, isComplete, pendingHits, sellValue, squadIds,
 } from '../core/squad.js';
 
 // One pitch row per position, in lineup order. K and DEF share a row, as do TE and FLEX.
@@ -93,7 +93,7 @@ export default function TeamView({ team, actions: teamActions, playersById, week
         { label: 'Vice-captain', disabled: !captainable || team.vice === sheetId, onClick: () => { teamActions.setRole(sheetId, 'vice'); close(); } },
         HAS_BENCH && { label: 'Substitute', primary: true, onClick: () => { setSwapFrom(sheetLoc); close(); } },
         {
-          label: `Sell (${fmtPrice(sellValue(team, sheetId, sheetPlayer.price))})`,
+          label: isFreePosition(sheetPlayer.pos) ? 'Swap (free)' : `Sell (${fmtPrice(sellValue(team, sheetId, sheetPlayer.price))})`,
           danger: true,
           onClick: () => { teamActions.sell(sheetPlayer); close(); openMarket(sheetPlayer.pos); },
         },

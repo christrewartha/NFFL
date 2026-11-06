@@ -15,6 +15,7 @@ npm run build    # static build in dist/
 
 - **Budget:** £100m.
 - **Squad:** 15 players: 2 QB, 4 RB, 5 WR, 2 TE, 1 K, 1 DEF.
+- **Free picks:** the kicker and defence cost nothing, and swapping them doesn't use a transfer, so you can pick a new one every week (`freePositions`).
 - **Lineup:** no bench. All 15 play every week. So there's no value in stashing backups, and the choice moves to the squad itself (e.g. two solid QBs, or one megastar and a cheap second). A player on a bye scores zero, so bye weeks work like FPL blank gameweeks. The engine still supports a bench and FLEX: set `starterSlots` and `benchSize`.
 - **Team limit:** at most 3 players from one NFL team.
 - **Scoring:** half PPR. The captain scores double, and the vice takes over if the captain doesn't play.
@@ -36,7 +37,7 @@ Price is set from expected points per game, using three signals:
 
 **Weekly moves are capped** (`PRICE_MOVES`): up to £0.3m up and £0.1m down a week, so prices rise more easily than they fall, as in FPL. The replay uses this. The live app doesn't yet, because it needs last week's prices.
 
-Each position has its own price band. The replacement-level player (e.g. RB48) gets the minimum price and the second-best player gets the maximum, with a straight line in between. The cheapest possible squad costs about £66.5m, which leaves about £33.5m for upgrades.
+Each position has its own price band. The replacement-level player (e.g. RB48) gets the minimum price and the second-best player gets the maximum, with a straight line in between. Kickers and defences are priced at zero. The cheapest possible squad costs about £58.5m, which leaves about £41.5m for upgrades.
 
 Prices are recalculated every time the app refreshes from Sleeper, at most every 30 minutes.
 

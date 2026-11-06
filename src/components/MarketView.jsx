@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react';
 import PlayerAvatar from './PlayerAvatar.jsx';
 import PlayerSheet from './PlayerSheet.jsx';
 import { byeWeek, useFixtures } from './season.js';
-import { injuryShort, playerFor } from './lookup.js';
+import { injuryShort, playerFor, priceText } from './lookup.js';
 import { POSITIONS, RULES, SLOT_ELIGIBLE, fmtPrice, fmtPts } from '../core/rules.js';
 import {
-  cannotAdd, countBy, freeTransfersLeft, isBuildingWeek, minCostToFill, pendingHits,
+  cannotAdd, countBy, freeTransfersLeft, isBuildingWeek, isFreePosition, minCostToFill, pendingHits,
   sellValue, squadIds, transfersMade,
 } from '../core/squad.js';
 
@@ -46,8 +46,8 @@ export default function MarketView({ team, actions: teamActions, market, players
   const actions = !sheetPlayer
     ? []
     : sheetOwned
-      ? [{ label: `Sell (${fmtPrice(sellValue(team, sheetId, sheetPlayer.price))})`, danger: true, onClick: () => { sell(sheetPlayer); setSheetId(null); } }]
-      : [{ label: sheetBlock ?? `Buy (${fmtPrice(sheetPlayer.price)})`, primary: true, disabled: Boolean(sheetBlock), onClick: () => { buy(sheetPlayer); setSheetId(null); } }];
+      ? [{ label: isFreePosition(sheetPlayer.pos) ? 'Remove' : `Sell (${fmtPrice(sellValue(team, sheetId, sheetPlayer.price))})`, danger: true, onClick: () => { sell(sheetPlayer); setSheetId(null); } }]
+      : [{ label: sheetBlock ?? `Buy (${priceText(sheetPlayer.price, sheetPlayer.pos)})`, primary: true, disabled: Boolean(sheetBlock), onClick: () => { buy(sheetPlayer); setSheetId(null); } }];
 
   const made = transfersMade(team);
   const hits = pendingHits(team);
@@ -115,7 +115,7 @@ export default function MarketView({ team, actions: teamActions, market, players
               </button>
               <span className="num">{fmtPts(p.seasonPpg)}</span>
               <span className="num">{p.opponent === 'BYE' ? '-' : fmtPts(p.weekProj)}</span>
-              <span className="num price">{p.price != null ? fmtPrice(p.price) : '-'}</span>
+              <span className="num price">{priceText(p.price, p.pos)}</span>
               {mine ? (
                 <button className="mini danger" onClick={() => sell(p)} title={`Sell for ${fmtPrice(sellValue(team, p.id, p.price))}`}>−</button>
               ) : (

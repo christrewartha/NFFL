@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { RULES, fmtPrice } from '../core/rules.js';
-import { sellValue } from '../core/squad.js';
-import { playerFor } from './lookup.js';
+import { isFreePosition, sellValue } from '../core/squad.js';
+import { playerFor, priceText } from './lookup.js';
 
 const freeText = (n) => (n === Infinity ? 'unlimited (squad-building week)' : String(n));
 
@@ -13,7 +13,12 @@ export function DraftBar({ draftState }) {
   const [error, setError] = useState(null);
   if (!summary?.changed) return null;
 
-  const transfers = Math.max(summary.out.length, summary.in.length);
+  const free = (id) => isFreePosition(draft.info[id]?.pos);
+  const count = (ids, wantFree) => ids.filter((id) => free(id) === wantFree).length;
+  const transfers = Math.max(count(summary.out, false), count(summary.in, false));
+  const freeSwaps = Math.max(count(summary.out, true), count(summary.in, true));
+  const plural = (n, word) => `${n} ${word}${n > 1 ? 's' : ''}`;
+  const headline = [transfers && plural(transfers, 'transfer'), freeSwaps && plural(freeSwaps, 'free K/DEF swap')].filter(Boolean).join(' + ') || 'Armband change';
   const freeUsed = summary.freeBefore === Infinity ? 0 : summary.freeBefore - summary.freeAfter;
   const name = (id) => (playerFor(id, draft, byId) ?? playerFor(id, base, byId))?.name ?? id;
 
@@ -34,7 +39,7 @@ export function DraftBar({ draftState }) {
     <>
       <div className="draft-bar">
         <div className="draft-text">
-          <strong>{transfers ? `${transfers} transfer${transfers > 1 ? 's' : ''}` : 'Armband change'}</strong>
+          <strong>{headline}</strong>
           <span className="muted small">
             {summary.hitsAdded > 0 ? <span className="error">−{summary.hitsAdded} pts</span> : 'No points cost'}
             {' · '}bank {fmtPrice(summary.bankAfter)}
@@ -48,14 +53,14 @@ export function DraftBar({ draftState }) {
         <div className="sheet-backdrop" onClick={() => !busy && setReviewing(false)}>
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
             <h3 className="sheet-name">Confirm changes</h3>
-            {transfers > 0 && (
+            {summary.out.length + summary.in.length > 0 && (
               <table className="week-table confirm-table">
                 <tbody>
                   {summary.out.map((id) => (
-                    <tr key={`o${id}`}><td className="error">Out</td><td>{name(id)}</td><td className="num">{fmtPrice(sellValue(base, id, byId.get(id)?.price))}</td></tr>
+                    <tr key={`o${id}`}><td className="error">Out</td><td>{name(id)}</td><td className="num">{free(id) ? 'Free' : fmtPrice(sellValue(base, id, byId.get(id)?.price))}</td></tr>
                   ))}
                   {summary.in.map((id) => (
-                    <tr key={`i${id}`}><td className="ok">In</td><td>{name(id)}</td><td className="num">{fmtPrice(draft.buy[id])}</td></tr>
+                    <tr key={`i${id}`}><td className="ok">In</td><td>{name(id)}</td><td className="num">{priceText(draft.buy[id], draft.info[id]?.pos)}</td></tr>
                   ))}
                 </tbody>
               </table>

@@ -3,6 +3,8 @@ import PlayerAvatar from './PlayerAvatar.jsx';
 import { byeWeek, useFixtures, useSeason } from './season.js';
 import { fixtureLabel } from '../core/gameweeks.js';
 import { fmtPrice, fmtPts } from '../core/rules.js';
+import { isFreePosition } from '../core/squad.js';
+import { priceText } from './lookup.js';
 
 /** Bottom sheet with a player's numbers and whatever actions the caller passes in. */
 export default function PlayerSheet({ player, ...props }) {
@@ -15,8 +17,8 @@ function Sheet({ player, sellFor, actions = [], onClose }) {
   const [showLog, setShowLog] = useState(false);
   const bye = byeWeek(fixturesOf(player.team));
   const stats = [
-    ['Price', player.price != null ? fmtPrice(player.price) : '-'],
-    sellFor != null && ['Sells for', fmtPrice(sellFor)],
+    ['Price', isFreePosition(player.pos) ? "Free (swaps don't use a transfer)" : priceText(player.price, player.pos)],
+    sellFor != null && !isFreePosition(player.pos) && ['Sells for', fmtPrice(sellFor)],
     ['Next week', player.opponent === 'BYE' ? 'Bye' : `${fmtPts(player.weekProj)} proj${player.opponent ? ` v ${player.opponent}` : ''}`],
     bye && ['Bye week', `Week ${bye}`],
     ['Season', player.gp ? `${fmtPts(player.seasonPts)} pts in ${player.gp} gm (${fmtPts(player.seasonPpg)}/gm)` : 'No games yet', () => setShowLog(!showLog)],

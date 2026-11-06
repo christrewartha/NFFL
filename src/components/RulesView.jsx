@@ -14,6 +14,9 @@ export default function RulesView({ league = false, children }) {
           {RULES.benchSize ? `${RULES.starterSlots.join(', ')}, plus a bench of ${RULES.benchSize}.` : 'No bench: all 15 play every week.'}
         </li>
         <li><strong>Max {RULES.maxPerTeam}</strong> players from any one NFL team.</li>
+        {RULES.freePositions.length > 0 && (
+          <li><strong>Free picks</strong> {RULES.freePositions.join(' and ')} cost nothing, and swapping them doesn't use a transfer: pick a new one every week if you like.</li>
+        )}
         <li><strong>Scoring</strong> Half PPR (Sleeper's {RULES.scoring}). Captain scores ×{RULES.captainMultiplier}; the vice takes over if the captain doesn't play.
           {RULES.noCaptain.length > 0 && ` ${RULES.noCaptain.join('s, ')}s can't be captain or vice.`}
         </li>
@@ -45,7 +48,7 @@ export default function RulesView({ league = false, children }) {
         <thead><tr><th>Pos</th><th>Min</th><th>Max</th><th>Min-priced from rank</th></tr></thead>
         <tbody>
           {Object.entries(PRICE_BANDS).map(([pos, b]) => (
-            <tr key={pos}><td><span className={`pos-tag pos-${pos}`}>{pos}</span></td><td>{fmtPrice(b.min)}</td><td>{fmtPrice(b.max)}</td><td>{b.replacement}</td></tr>
+            <tr key={pos}><td><span className={`pos-tag pos-${pos}`}>{pos}</span></td>{RULES.freePositions.includes(pos) ? <td colSpan={3}>Free</td> : <><td>{fmtPrice(b.min)}</td><td>{fmtPrice(b.max)}</td><td>{b.replacement}</td></>}</tr>
           ))}
         </tbody>
       </table>

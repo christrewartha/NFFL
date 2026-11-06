@@ -4,7 +4,7 @@ import { RULES } from './rules.js';
 import { assignPrices, expectedPpg, sellPrice } from './pricing.js';
 import { isBye, openWeek, weekInfo } from './gameweeks.js';
 import {
-  addPlayer, autoLineup, canSwap, cannotAdd, freeTransfersLeft, isComplete, newTeam,
+  addPlayer, autoLineup, canSwap, cannotAdd, freeTransfersLeft, isComplete, newTeam, squadIds,
   minCostToFill, normalizeTeam, pendingHits, removePlayer, rollover, scoreWeek, setRole, swap, transfersMade,
 } from './squad.js';
 
@@ -296,4 +296,27 @@ test('teamFixtures: home/away by week, gaps are byes', async () => {
   assert.deepEqual(kc.map(fixtureLabel), ['v BUF', 'BYE', '@ DEN']);
   assert.equal(teamFixtures(schedule, 'BUF')[1].bye, true);
   assert.equal(kc[0].status, 'complete');
+});
+
+test('kickers and defences are free and swapping them is not a transfer', async () => {
+  const { refundFreePositions } = await import('./squad.js');
+  const priced = assignPrices([...Array.from({ length: 20 }, (_, i) => ({ id: `k${i}`, pos: 'K', value: 20 - i })), { id: 'd', pos: 'DEF', value: 9 }]);
+  assert.ok(priced.every((p) => p.price === 0));
+
+  let { team } = fullSquad();
+  team = rollover(team, 10);
+  const k = squadIds(team).find((id) => team.info[id].pos === 'K');
+  const def = squadIds(team).find((id) => team.info[id].pos === 'DEF');
+  team = addPlayer(removePlayer(team, k, 0), mk('K', 0));
+  team = addPlayer(removePlayer(team, def, 0), mk('DEF', 0));
+  assert.equal(transfersMade(team), 0);
+  assert.equal(freeTransfersLeft(team), RULES.freeTransfersPerWeek);
+  team = addPlayer(removePlayer(team, team.starters[slotOf(team, 'WR')], 50), mk('WR', 50));
+  assert.equal(transfersMade(team), 1); // only the WR counts
+
+  // Squads that paid for a K/DEF before they became free get the money back, once.
+  const old = fullSquad().team; // fullSquad bought K and DEF at 50 each
+  const refunded = refundFreePositions(old);
+  assert.equal(refunded.bank, old.bank + 100);
+  assert.equal(refundFreePositions(refunded), refunded);
 });

@@ -1,3 +1,6 @@
+import { fmtPrice } from '../core/rules.js';
+import { isFreePosition } from '../core/squad.js';
+
 // Resolve a squad id to a display player. Players who have dropped out of the market
 // (released, retired) fall back to the snapshot kept on the team, at their purchase price.
 export function playerFor(id, team, playersById) {
@@ -12,3 +15,6 @@ export const shortName = (p) => (p.pos === 'DEF' ? p.team : `${p.name.split(' ')
 
 const INJURY_SHORT = { Questionable: 'Q', Doubtful: 'D', Out: 'O', IR: 'IR', PUP: 'PUP', Sus: 'SUS', NA: 'NA' };
 export const injuryShort = (inj) => (inj ? INJURY_SHORT[inj.status] ?? inj.status : null);
+
+/** "Free" for kickers and defences, otherwise the price. */
+export const priceText = (price, pos) => (isFreePosition(pos) ? 'Free' : price != null ? fmtPrice(price) : '-');

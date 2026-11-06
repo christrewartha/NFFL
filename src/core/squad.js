@@ -50,10 +50,13 @@ export function countBy(team, key) {
 }
 
 /** Players in the squad now who weren't at the start of the week. */
+export const isFreePosition = (pos) => RULES.freePositions.includes(pos);
+
+/** Players in the squad now who weren't at the start of the week (free positions don't count). */
 export function transfersMade(team) {
   if (isBuildingWeek(team)) return 0;
   const start = new Set(team.weekStartIds);
-  return squadIds(team).filter((id) => !start.has(id)).length;
+  return squadIds(team).filter((id) => !start.has(id) && !isFreePosition(team.info[id].pos)).length;
 }
 
 export function freeTransfersLeft(team) {
@@ -270,11 +273,28 @@ export function autoLineup(team, scoreOf) {
  * changed, and drop armbands that are no longer allowed (refilled by projection).
  */
 export function normalizeTeam(team, scoreOf) {
+  team = refundFreePositions(team);
   const reshaped = team.starters.length !== RULES.starterSlots.length || team.bench.length !== RULES.benchSize;
   const next = reshaped ? { ...team, ...arrange(squadIds(team), (id) => team.info[id].pos, scoreOf) } : team;
   const allowed = (id) => !id || canCaptain(next, id);
   if (!reshaped && allowed(team.captain) && allowed(team.vice)) return team;
   return autoLineup(next, scoreOf);
+}
+
+/**
+ * Players bought before a position became free were paid for: give the money back, so
+ * existing squads get the same spending power as new ones. Safe to run repeatedly.
+ */
+export function refundFreePositions(team) {
+  const owed = squadIds(team).filter((id) => isFreePosition(team.info[id].pos) && team.buy[id] > 0);
+  if (!owed.length) return team;
+  const buy = { ...team.buy };
+  let bank = team.bank;
+  for (const id of owed) {
+    bank += buy[id];
+    buy[id] = 0;
+  }
+  return { ...team, buy, bank };
 }
 
 /**

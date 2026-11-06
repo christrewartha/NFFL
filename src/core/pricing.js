@@ -9,8 +9,9 @@ export const PRICE_BANDS = {
   RB: { min: 45, max: 125, replacement: 48 },
   WR: { min: 45, max: 125, replacement: 60 },
   TE: { min: 40, max: 90, replacement: 20 },
-  K: { min: 40, max: 55, replacement: 16 },
-  DEF: { min: 40, max: 55, replacement: 16 },
+  // Free positions (RULES.freePositions) are priced at zero.
+  K: { min: 0, max: 0, replacement: 16 },
+  DEF: { min: 0, max: 0, replacement: 16 },
 };
 
 // How much each signal counts towards expected points per game.

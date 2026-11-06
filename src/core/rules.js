@@ -17,6 +17,9 @@ export const RULES = {
   captainMultiplier: 2,
   // QBs out-project everyone almost every week, which would make captaincy automatic.
   noCaptain: ['QB'],
+  // Kickers and defences cost nothing and can be swapped without using a transfer,
+  // so they're a free weekly pick rather than a drain on budget and transfers.
+  freePositions: ['K', 'DEF'],
   scoring: 'pts_half_ppr',
 };
 

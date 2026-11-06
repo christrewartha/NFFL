@@ -4,7 +4,7 @@
 import { loadSeason } from '../scripts/load-season.mjs';
 import { replaySeason } from '../src/core/replay.js';
 import { leagueOpenWeek, leagueWeeks } from '../src/core/league.js';
-import { newTeam, rollover, scoreWeek } from '../src/core/squad.js';
+import { newTeam, refundFreePositions, rollover, scoreWeek } from '../src/core/squad.js';
 
 const seasons = new Map();
 
@@ -33,7 +33,7 @@ export function clock(league, totalWeeks, now = Date.now()) {
 /** The manager's team brought up to date with the clock (new managers start in the open week). */
 export function currentTeam(manager, league, c) {
   const team = manager.team ?? newTeam(league.season, c.rolloverTo);
-  return rollover(team, c.rolloverTo);
+  return rollover(refundFreePositions(team), c.rolloverTo);
 }
 
 /** Points for each locked week: [{ week, total, ...scoreWeek }]. */

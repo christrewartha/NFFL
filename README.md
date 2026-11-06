@@ -116,6 +116,30 @@ cp backups/nffl-20261107-033000.db server/nffl.db
 sudo systemctl start nffl
 ```
 
+### Automatic deploys
+
+Once set up, anything pushed to `main` on GitHub goes live on the server within about 2 minutes. The server checks GitHub every 2 minutes using its read-only deploy key, so nothing extra is exposed to the internet. Each deploy (`scripts/deploy.sh`):
+
+1. Backs up the database.
+2. Pulls the new commit, reinstalls packages if `package.json`/`package-lock.json` changed, runs the tests and builds. The old version keeps serving meanwhile.
+3. Restarts the server only if that all passed, then checks it responds.
+4. If any step fails, puts the previous version back. A failed commit isn't retried. The next push gets a fresh attempt.
+
+Local edits on the server are kept. If one clashes with an incoming change, the deploy stops and tells you.
+
+**Set up once** on the server (after a manual `git pull` to fetch the scripts):
+
+```sh
+cd ~/NFFL && sudo scripts/install-deploy.sh
+```
+
+This adds a systemd timer (`nffl-deploy`) that runs the deploy as your user, plus a sudo rule letting it restart the `nffl` service and nothing else.
+
+- **Watch deploys:** `journalctl -u nffl-deploy -f`
+- **Next check:** `systemctl list-timers nffl-deploy`
+- **Deploy now:** `sudo systemctl start nffl-deploy`
+- **Pause:** `sudo systemctl stop nffl-deploy.timer` (`start` to resume)
+
 ### Hosting it from home
 
 The server is one Node process on port 8787. To reach it from outside on a home connection with a changing IP:

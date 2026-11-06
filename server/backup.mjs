@@ -4,7 +4,7 @@
 // checked, then copies older than --keep days are deleted. Run it nightly from cron and
 // sync the folder off the machine (see the README).
 
-import { mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync, backup } from 'node:sqlite';
@@ -23,6 +23,10 @@ const PREFIX = 'nffl-';
 const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-'); // 20261107-033000
 const target = join(dir, `${PREFIX}${stamp}.db`);
 
+if (!existsSync(source)) {
+  console.error(`No database at ${source} yet, so nothing to back up.`);
+  process.exit(1);
+}
 mkdirSync(dir, { recursive: true });
 const db = new DatabaseSync(source);
 await backup(db, target);

@@ -186,6 +186,8 @@ button.mini { width: 30px; height: 30px; border-radius: 50%; padding: 0; font-si
 .sheet-stats .stat-button.open { border-color: var(--accent); }
 .stat-hint { color: var(--accent); font-size: 10px; float: right; }
 .log-table { margin-bottom: 14px; }
+.stat-line { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+.log-table td { vertical-align: top; }
 .log-table td:first-child { white-space: nowrap; }
 .log-table .bye-row td { color: var(--danger); }
 .log-table .current-row td { background: rgba(60, 207, 122, 0.1); }

@@ -116,7 +116,7 @@ const routes = {
       .filter((w) => w.complete)
       .flatMap(({ week }) => {
         const s = season[week - 1].scores[id];
-        return s ? [{ week, pts: s.pts, played: s.played }] : [];
+        return s ? [{ week, pts: s.pts, played: s.played, stats: season[week - 1].box[id] ?? null }] : [];
       });
   },
 

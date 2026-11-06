@@ -336,3 +336,14 @@ test('kickers and defences are free and swapping them is not a transfer', async 
   assert.equal(refunded.bank, old.bank + 100);
   assert.equal(refundFreePositions(refunded), refunded);
 });
+
+test('statLine: readable box scores per position', async () => {
+  const { statLine, sumBox } = await import('./statLines.js');
+  assert.equal(statLine('QB', { pass_cmp: 30, pass_att: 39, pass_yd: 360, pass_td: 5, rush_att: 3, rush_yd: 5 }), '30/39, 360 yds, 5 TD · 3 rush, 5 yds');
+  assert.equal(statLine('RB', { rush_att: 18, rush_yd: 164, rush_td: 1, rec: 6, rec_tgt: 7, rec_yd: 30, fum_lost: 1 }), '18 rush, 164 yds, 1 TD · 6/7 rec, 30 yds · 1 fumble lost');
+  assert.equal(statLine('WR', { rec: 9, rec_tgt: 11, rec_yd: 184, rec_td: 2 }), '9/11 rec, 184 yds, 2 TD');
+  assert.equal(statLine('K', { fgm: 4, fga: 5, xpm: 2, xpa: 2 }), 'FG 4/5, XP 2/2');
+  assert.equal(statLine('DEF', { sack: 1, int: 4, pts_allow: 20 }), '1 sack, 4 INT, 20 pts allowed');
+  assert.equal(statLine('DEF', sumBox([{ sack: 3, pts_allow: 20 }, { sack: 2, pts_allow: 14 }]), { games: 2 }), '5 sacks, 17.0 pts allowed/gm');
+  assert.equal(statLine('WR', {}), '');
+});

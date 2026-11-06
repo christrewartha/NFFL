@@ -3,11 +3,12 @@
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { POSITIONS } from '../src/core/rules.js';
+import { BOX_KEYS } from '../src/core/statLines.js';
 
 const season = Number(process.argv[2] ?? 2025);
 const API = 'https://api.sleeper.app';
 const positionQuery = POSITIONS.map((p) => `position[]=${p}`).join('&');
-const STAT_KEYS = ['pts_half_ppr', 'gp', 'off_snp', 'tm_off_snp'];
+const STAT_KEYS = ['pts_half_ppr', 'gp', 'off_snp', 'tm_off_snp', ...BOX_KEYS];
 
 async function getJson(path) {
   const res = await fetch(`${API}${path}`);

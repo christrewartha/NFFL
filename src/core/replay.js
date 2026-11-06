@@ -11,6 +11,7 @@
 import { RULES } from './rules.js';
 import { buildMarket } from './sleeper.js';
 import { PRICE_MOVES, capPriceMoves } from './pricing.js';
+import { boxScore } from './statLines.js';
 import { weekInfo } from './gameweeks.js';
 
 const pts = (stats) => stats?.[RULES.scoring] ?? 0;
@@ -77,7 +78,7 @@ function deadlineView({ seasonProj, proj, stats }, weeks, week) {
   return { projections, knownOut };
 }
 
-/** The priced market at the week's deadline, and the week's actual scores. */
+/** The priced market at the week's deadline, the week's actual scores, and box scores by player. */
 export function replayWeek(data, week) {
   const weeks = weekInfo(data.schedule);
   const { projections, knownOut } = deadlineView(data, weeks, week);
@@ -89,22 +90,26 @@ export function replayWeek(data, week) {
     week,
   });
   const scores = {};
-  for (const r of data.stats[week] ?? []) scores[r.player_id] = { pts: pts(r.stats), played: (r.stats?.gp ?? 0) > 0 };
-  return { market, scores, weeks };
+  const box = {};
+  for (const r of data.stats[week] ?? []) {
+    scores[r.player_id] = { pts: pts(r.stats), played: (r.stats?.gp ?? 0) > 0 };
+    if (r.stats?.gp) box[r.player_id] = boxScore(r.stats);
+  }
+  return { market, scores, box, weeks };
 }
 
 /**
  * Every week of the season, with prices capped week to week (pass null for uncapped).
- * Returns [{ week, market, byId, scores }] indexed from week 1 at [0].
+ * Returns [{ week, market, byId, scores, box }] indexed from week 1 at [0].
  */
 export function replaySeason(data, moves = PRICE_MOVES) {
   const out = [];
   const total = Math.max(...data.schedule.map((g) => g.week));
   for (let week = 1; week <= total; week++) {
-    let { market, scores } = replayWeek(data, week);
+    let { market, scores, box } = replayWeek(data, week);
     const prev = out.at(-1);
     if (moves && prev) market = capPriceMoves(market, new Map(prev.market.map((p) => [p.id, p.price])), moves);
-    out.push({ week, market, byId: new Map(market.map((p) => [p.id, p])), scores });
+    out.push({ week, market, byId: new Map(market.map((p) => [p.id, p])), scores, box });
   }
   return out;
 }

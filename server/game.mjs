@@ -11,6 +11,9 @@ const seasons = new Map();
 async function loadReplay(season) {
   if (!seasons.has(season)) {
     const data = await loadSeason(season);
+    if (!Object.values(data.stats).flat().some((r) => r.stats?.pass_yd != null)) {
+      console.warn(`data/${season} has no box-score stats (yards, TDs...), so game logs will show points only. Refresh it with: node scripts/fetch-season.mjs ${season}, then restart.`);
+    }
     seasons.set(season, {
       weeks: replaySeason(data),
       // The fixture list is public knowledge (as in a real season), so it's safe to send.

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import PlayerAvatar from './PlayerAvatar.jsx';
 import { byeWeek, useFixtures, useSeason } from './season.js';
-import { fixtureLabel } from '../core/gameweeks.js';
+import { fixtureLabel, fixtureResult } from '../core/gameweeks.js';
 import { fmtPrice, fmtPts } from '../core/rules.js';
 import { isFreePosition } from '../core/squad.js';
 import { statLine, sumBox } from '../core/statLines.js';
@@ -148,6 +148,7 @@ function GameLog({ player, fixtures, log, error }) {
                 <td className="muted">Wk {f.week}</td>
                 <td>
                   {fixtureLabel(f)}{f.week === current && <span className="muted small"> · next</span>}
+                  {f.week < current && fixtureResult(f) && <span className={`game-result ${fixtureResult(f)[0]}`}>{fixtureResult(f)}</span>}
                   {line && <span className="stat-line">{line}</span>}
                 </td>
                 <td className="num">{result(f)}</td>

@@ -12,8 +12,16 @@ import Shell, { TABS } from './components/Shell.jsx';
 import { DraftBar } from './components/DraftBar.jsx';
 import { useDraft } from './components/useDraft.js';
 import { SeasonContext } from './components/season.js';
+import { withResults } from './core/results.js';
 
 const STALE_MS = 30 * 60 * 1000;
+
+// Real final scores, through the league server (ESPN won't answer browsers directly).
+async function fetchNflResults(season, week) {
+  const res = await fetch(`/api/nfl-results?season=${season}&week=${week}`);
+  if (!res.ok) throw new Error(`Results for week ${week} unavailable`);
+  return res.json();
+}
 
 
 export default function App() {
@@ -53,11 +61,27 @@ export default function App() {
 
   const weeks = useMemo(() => (market ? weekInfo(market.schedule) : []), [market]);
   const playersById = useMemo(() => new Map((market?.players ?? []).map((p) => [p.id, p])), [market]);
+  // Final scores for finished weeks, cached on the device once fetched (they never change).
+  const [results, setResults] = useState([]);
+  useEffect(() => {
+    if (!market) return undefined;
+    let live = true;
+    const done = weekInfo(market.schedule).filter((w) => w.complete).map((w) => w.week);
+    Promise.all(done.map(async (week) => {
+      const key = `results:${market.season}:${week}`;
+      const rows = load(key) ?? await fetchNflResults(market.season, week).then((r) => (save(key, r), r));
+      return rows.map((r) => ({ week, ...r }));
+    }))
+      .then((weeks) => live && setResults(weeks.flat()))
+      .catch(() => {}); // Scores are a nice-to-have; the game log works without them.
+    return () => { live = false; };
+  }, [market]);
+
   const season = useMemo(() => ({
-    schedule: market?.schedule ?? [],
+    schedule: withResults(market?.schedule ?? [], results),
     week: market?.week ?? null,
     getLog: (p) => fetchPlayerLog(market.season, p.id),
-  }), [market]);
+  }), [market, results]);
 
   const startTeam = () => setTeam(newTeam(market.season, market.week));
   // Transfers and armbands are drafted, then confirmed. Bench moves (if a bench is configured) apply directly.

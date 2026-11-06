@@ -42,17 +42,26 @@ export function isWeekComplete(weeks, week) {
 }
 
 /**
- * A team's season week by week: { week, opponent, home, status } or { week, bye: true }.
- * status is Sleeper's game status ('pre_game', 'in_game', 'complete') when the schedule has it.
+ * A team's season week by week: { week, opponent, home, status, score } or { week, bye: true }.
+ * status is Sleeper's game status ('pre_game', 'in_game', 'complete') when the schedule has it;
+ * score is { for, against } once the schedule carries the final score (see results.js).
  */
 export function teamFixtures(schedule, team) {
   const total = Math.max(0, ...schedule.map((g) => g.week));
   const games = new Map();
   for (const g of schedule) {
-    if (g.home === team) games.set(g.week, { opponent: g.away, home: true, status: g.status });
-    else if (g.away === team) games.set(g.week, { opponent: g.home, home: false, status: g.status });
+    const final = g.homeScore != null && g.awayScore != null;
+    if (g.home === team) games.set(g.week, { opponent: g.away, home: true, status: g.status, score: final ? { for: g.homeScore, against: g.awayScore } : null });
+    else if (g.away === team) games.set(g.week, { opponent: g.home, home: false, status: g.status, score: final ? { for: g.awayScore, against: g.homeScore } : null });
   }
   return Array.from({ length: total }, (_, i) => ({ week: i + 1, ...(games.get(i + 1) ?? { bye: true }) }));
 }
 
 export const fixtureLabel = (f) => (!f ? '' : f.bye ? 'BYE' : `${f.home ? 'v' : '@'} ${f.opponent}`);
+
+/** "W 44–21", "L 17–20" or "T 20–20" from the team's point of view, or '' before the final. */
+export function fixtureResult(f) {
+  if (!f?.score) return '';
+  const { for: us, against: them } = f.score;
+  return `${us > them ? 'W' : us < them ? 'L' : 'T'} ${us}–${them}`;
+}

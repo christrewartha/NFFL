@@ -16,8 +16,9 @@ async function loadReplay(season) {
     }
     seasons.set(season, {
       weeks: replaySeason(data),
-      // The fixture list is public knowledge (as in a real season), so it's safe to send.
-      schedule: data.schedule.map(({ week, home, away }) => ({ week, home, away })),
+      // The fixture list is public knowledge, as in a real season. Final scores are not:
+      // leagueSchedule() strips them for weeks whose results aren't out yet.
+      schedule: data.schedule.map(({ week, home, away, homeScore, awayScore }) => ({ week, home, away, homeScore, awayScore })),
     });
   }
   return seasons.get(season);
@@ -46,6 +47,11 @@ export function clock(league, totalWeeks, now = Date.now()) {
 export function currentTeam(manager, league, c) {
   const team = manager.team ?? newTeam(league.season, c.rolloverTo);
   return rollover(refundFreePositions(team), c.rolloverTo);
+}
+
+/** The fixture list as this league may see it: scores only for weeks whose results are out. */
+export function leagueSchedule(schedule, c) {
+  return schedule.map((g) => (c.weeks[g.week - 1]?.complete ? g : { week: g.week, home: g.home, away: g.away }));
 }
 
 /** Points for each week whose results are out: [{ week, total, ...scoreWeek }]. */

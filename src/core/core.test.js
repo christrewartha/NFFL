@@ -347,3 +347,32 @@ test('statLine: readable box scores per position', async () => {
   assert.equal(statLine('DEF', sumBox([{ sack: 3, pts_allow: 20 }, { sack: 2, pts_allow: 14 }]), { games: 2 }), '5 sacks, 17.0 pts allowed/gm');
   assert.equal(statLine('WR', {}), '');
 });
+
+test('final scores: ESPN scoreboard to W/L lines, with team codes translated', async () => {
+  const { parseScoreboard, withResults } = await import('./results.js');
+  const { teamFixtures, fixtureResult } = await import('./gameweeks.js');
+  const game = (home, hs, away, as, completed = true) => ({
+    competitions: [{ status: { type: { completed } }, competitors: [
+      { homeAway: 'home', team: { abbreviation: home }, score: String(hs) },
+      { homeAway: 'away', team: { abbreviation: away }, score: String(as) },
+    ] }],
+  });
+  const parsed = parseScoreboard({ events: [game('CIN', 20, 'PIT', 23), game('WSH', 28, 'JAX', 22), game('KC', 0, 'DEN', 0, false)] });
+  assert.deepEqual(parsed.map((g) => `${g.away}@${g.home}`), ['PIT@CIN', 'JAX@WAS']); // unfinished game skipped
+
+  const schedule = withResults([{ week: 1, home: 'CIN', away: 'PIT' }, { week: 2, home: 'PIT', away: 'NE' }], parsed.map((r) => ({ week: 1, ...r })));
+  const pit = teamFixtures(schedule, 'PIT');
+  assert.equal(fixtureResult(pit[0]), 'W 23–20');
+  assert.equal(fixtureResult(teamFixtures(schedule, 'CIN')[0]), 'L 20–23');
+  assert.equal(fixtureResult(pit[1]), ''); // not played yet
+});
+
+test('league schedule hides scores until that week\'s results are out', async () => {
+  const { leagueSchedule } = await import('../../server/game.mjs');
+  const schedule = [{ week: 1, home: 'A', away: 'B', homeScore: 10, awayScore: 7 }, { week: 2, home: 'B', away: 'A', homeScore: 3, awayScore: 21 }];
+  const c = { weeks: [{ week: 1, complete: true }, { week: 2, complete: false }] };
+  const seen = leagueSchedule(schedule, c);
+  assert.equal(seen[0].homeScore, 10);
+  assert.equal(seen[1].homeScore, undefined);
+  assert.equal(seen[1].awayScore, undefined);
+});

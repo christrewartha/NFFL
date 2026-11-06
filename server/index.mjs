@@ -6,8 +6,9 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkPin, openStore } from './store.mjs';
-import { clock, currentTeam, results, seasonSchedule, seasonWeeks } from './game.mjs';
+import { clock, currentTeam, leagueSchedule, results, seasonSchedule, seasonWeeks } from './game.mjs';
 import { applyChanges } from '../src/core/squad.js';
+import { fetchWeekResults } from '../src/core/results.js';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -41,6 +42,8 @@ function send(res, status, data) {
   res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' });
   res.end(JSON.stringify(data));
 }
+
+const nflResults = new Map();
 
 // A few join attempts per IP per 10 minutes, so PINs can't be brute-forced.
 const attempts = new Map();
@@ -102,7 +105,7 @@ const routes = {
       weeks: c.weeks,
       week: c.open,
       market: { season: league.season, week: c.open, players: c.open ? season[c.open - 1].market : [] },
-      schedule: await seasonSchedule(league.season),
+      schedule: leagueSchedule(await seasonSchedule(league.season), c),
       team,
     };
   },
@@ -138,6 +141,22 @@ const routes = {
     }
     store.saveTeam(manager.id, next);
     return { team: next };
+  },
+
+  // Real NFL final scores for solo play's game log. ESPN refuses browser requests from
+  // other sites, so fetch them here and cache them (finished games never change).
+  'GET /api/nfl-results': async (req, url) => {
+    const season = Number(url.searchParams.get('season'));
+    const week = Number(url.searchParams.get('week'));
+    if (!Number.isInteger(season) || season < 2000 || season > 2100 || !Number.isInteger(week) || week < 1 || week > 22) {
+      throw new HttpError(400, 'Bad season or week');
+    }
+    const key = `${season}:${week}`;
+    const cached = nflResults.get(key);
+    if (cached && Date.now() - cached.at < 10 * 60 * 1000) return cached.results;
+    const results = await fetchWeekResults(season, week);
+    nflResults.set(key, { results, at: Date.now() });
+    return results;
   },
 
   'GET /api/scores': async (req, url) => {

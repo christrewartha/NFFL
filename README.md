@@ -139,6 +139,7 @@ This adds a systemd timer (`nffl-deploy`) that runs the deploy as your user, plu
 - **Next check:** `systemctl list-timers nffl-deploy`
 - **Deploy now:** `sudo systemctl start nffl-deploy`
 - **Pause:** `sudo systemctl stop nffl-deploy.timer` (`start` to resume)
+- **Check it end to end:** push any small change and watch the log for `[deploy] Deployed …` within about 2 minutes.
 
 ### Hosting it from home
 

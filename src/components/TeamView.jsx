@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import PlayerAvatar from './PlayerAvatar.jsx';
 import PlayerSheet from './PlayerSheet.jsx';
 import FixtureGrid from './FixtureGrid.jsx';
@@ -18,6 +18,12 @@ const PITCH_ROWS = Object.values(
   }, {}),
 );
 const HAS_BENCH = RULES.benchSize > 0;
+// The first pitch row made up only of free positions (K and DEF) gets a divider above it.
+const FREE_ROW = PITCH_ROWS.findIndex((row) => row.every((i) => RULES.freePositions.includes(RULES.starterSlots[i])));
+
+const FreePicksDivider = () => (
+  <div className="free-divider"><span>Free picks · swap any week without using a transfer</span></div>
+);
 
 export function deadlineParts(weeks, week) {
   const w = weeks.find((x) => x.week === week);
@@ -126,7 +132,10 @@ export default function TeamView({ team, actions: teamActions, playersById, week
       ) : (
         <div className="pitch">
           {PITCH_ROWS.map((row, i) => (
-            <div className="pitch-row" key={i}>{row.map((index) => spot({ list: 'starters', index }))}</div>
+            <Fragment key={i}>
+              {i === FREE_ROW && <FreePicksDivider />}
+              <div className="pitch-row">{row.map((index) => spot({ list: 'starters', index }))}</div>
+            </Fragment>
           ))}
         </div>
       )}

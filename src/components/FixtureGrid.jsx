@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { playerFor, shortName } from './lookup.js';
 import { useFixtures, useSeason } from './season.js';
 import { fixtureLabel } from '../core/gameweeks.js';
@@ -41,14 +42,19 @@ export default function FixtureGrid({ team, playersById, onSelect }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={r.id} onClick={() => onSelect(r.loc)}>
-              <td className="fg-player"><span className={`pos-tag pos-${r.player.pos}`}>{r.slot}</span> {shortName(r.player)}</td>
-              {weeks.map((w) => {
-                const f = r.fixtures[w - 1];
-                return <td key={w} className={f?.bye ? 'bye' : ''}>{fixtureLabel(f)}</td>;
-              })}
-            </tr>
+          {rows.map((r, i) => (
+            <Fragment key={r.id}>
+              {RULES.freePositions.includes(r.slot) && !RULES.freePositions.includes(rows[i - 1]?.slot) && (
+                <tr className="fg-divider"><td colSpan={weeks.length + 1}>Free picks</td></tr>
+              )}
+              <tr onClick={() => onSelect(r.loc)}>
+                <td className="fg-player"><span className={`pos-tag pos-${r.player.pos}`}>{r.slot}</span> {shortName(r.player)}</td>
+                {weeks.map((w) => {
+                  const f = r.fixtures[w - 1];
+                  return <td key={w} className={f?.bye ? 'bye' : ''}>{fixtureLabel(f)}</td>;
+                })}
+              </tr>
+            </Fragment>
           ))}
         </tbody>
       </table>

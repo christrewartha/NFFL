@@ -2,10 +2,11 @@ import { Fragment, useState } from 'react';
 import PlayerAvatar from './PlayerAvatar.jsx';
 import PlayerSheet from './PlayerSheet.jsx';
 import FixtureGrid from './FixtureGrid.jsx';
+import ChipsBar from './ChipsBar.jsx';
 import { injuryShort, playerFor, shortName } from './lookup.js';
 import { RULES, fmtPrice, fmtPts } from '../core/rules.js';
 import {
-  canCaptain, canSwap, freeTransfersLeft, isFreePosition, isBuildingWeek, isComplete, pendingHits, sellValue, squadIds,
+  activeChip, canCaptain, canSwap, freeTransfersLeft, isFreePosition, isComplete, pendingHits, sellValue, squadIds, transfersUnlimited,
 } from '../core/squad.js';
 
 // One pitch row per position, in lineup order. K and DEF share a row, as do TE and FLEX.
@@ -35,7 +36,7 @@ export function deadlineParts(weeks, week) {
   };
 }
 
-export default function TeamView({ team, actions: teamActions, playersById, weeks, openMarket }) {
+export default function TeamView({ team, saved, actions: teamActions, playersById, weeks, openMarket }) {
   const [sheetLoc, setSheetLoc] = useState(null);
   const [swapFrom, setSwapFrom] = useState(null);
   const [view, setView] = useState('pitch');
@@ -43,7 +44,9 @@ export default function TeamView({ team, actions: teamActions, playersById, week
   const at = (loc) => team[loc.list][loc.index];
   const player = (id) => playerFor(id, team, playersById);
   const proj = (id) => player(id)?.weekProj ?? 0;
-  const projected = team.starters.reduce((s, id) => s + (id ? proj(id) * (id === team.captain ? RULES.captainMultiplier : 1) : 0), 0);
+  const chip = activeChip(team);
+  const captainMult = chip === 'tripleCaptain' ? RULES.tripleCaptainMultiplier : RULES.captainMultiplier;
+  const projected = team.starters.reduce((s, id) => s + (id ? proj(id) * (id === team.captain ? captainMult : 1) : 0), 0);
   const ft = freeTransfersLeft(team);
   const hits = pendingHits(team);
   const deadline = deadlineParts(weeks, team.currentWeek);
@@ -112,8 +115,13 @@ export default function TeamView({ team, actions: teamActions, playersById, week
         <div><span className="muted">Week {team.currentWeek} deadline</span><strong>{deadline.day}</strong><span className="muted small">{deadline.time}</span></div>
         <div><span className="muted">Projected</span><strong>{fmtPts(projected - hits)}</strong>{hits > 0 && <span className="error small">incl. −{hits} hit</span>}</div>
         <div><span className="muted">Bank</span><strong>{fmtPrice(team.bank)}</strong></div>
-        <div><span className="muted">Free transfers</span><strong>{isBuildingWeek(team) ? '∞' : ft}</strong></div>
+        <div><span className="muted">Free transfers</span><strong>{transfersUnlimited(team) ? '∞' : ft}</strong></div>
       </div>
+
+      <ChipsBar team={team} saved={saved} actions={teamActions} />
+      {chip === 'freeHit' && (
+        <div className="notice">Free Hit: transfers are free this week. After the deadline your squad goes back to how it was at the start of Week {team.currentWeek}.</div>
+      )}
 
       {!isComplete(team) && (
         <div className="notice">

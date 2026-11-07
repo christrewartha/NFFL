@@ -5,7 +5,7 @@
 import { POSITIONS, RULES } from './rules.js';
 import { adjustForInjury, assignPrices, expectedPpg, isOut } from './pricing.js';
 import { isBye, openWeek, weekInfo } from './gameweeks.js';
-import { boxScore } from './statLines.js';
+import { boxScore, scoredTds } from './statLines.js';
 
 const API = 'https://api.sleeper.app';
 const CDN = 'https://sleepercdn.com';
@@ -93,11 +93,11 @@ export async function fetchMarket({ fetchFn = globalThis.fetch.bind(globalThis),
   return { players, schedule, season, week, syncedAt: Date.now() };
 }
 
-/** One week's stats, keyed by player id: { [id]: { pts, played } }. */
+/** One week's stats, keyed by player id: { [id]: { pts, played, td, team } }. Add `won` with withWins(). */
 export async function fetchWeekScores(season, week, { fetchFn = globalThis.fetch.bind(globalThis) } = {}) {
   const rows = await getJson(fetchFn, `/stats/nfl/${season}/${week}?season_type=regular&${positionQuery}`);
   const out = {};
-  for (const r of rows) out[r.player_id] = { pts: pts(r.stats) ?? 0, played: (r.stats?.gp ?? 0) > 0 };
+  for (const r of rows) out[r.player_id] = { pts: pts(r.stats) ?? 0, played: (r.stats?.gp ?? 0) > 0, td: scoredTds(r.stats), team: r.team };
   return out;
 }
 

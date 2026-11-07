@@ -5,8 +5,8 @@ import { byeWeek, useFixtures } from './season.js';
 import { injuryShort, playerFor, priceText } from './lookup.js';
 import { POSITIONS, RULES, SLOT_ELIGIBLE, fmtPrice, fmtPts } from '../core/rules.js';
 import {
-  cannotAdd, countBy, freeTransfersLeft, isBuildingWeek, isFreePosition, minCostToFill, pendingHits,
-  sellValue, squadIds, transfersMade,
+  activeChip, cannotAdd, countBy, freeTransfersLeft, isFreePosition, minCostToFill, pendingHits,
+  sellValue, squadIds, transfersMade, transfersUnlimited,
 } from '../core/squad.js';
 
 const FILTERS = ['ALL', ...POSITIONS, 'FLEX', 'SQUAD'];
@@ -60,8 +60,8 @@ export default function MarketView({ team, actions: teamActions, market, players
         <div><span className="muted">Squad</span><strong>{owned.size}/15</strong></div>
         <div>
           <span className="muted">Transfers</span>
-          <strong>{isBuildingWeek(team) ? 'Free' : `${made} made`}</strong>
-          {!isBuildingWeek(team) && <span className="muted small">{freeTransfersLeft(team)} free left</span>}
+          <strong>{transfersUnlimited(team) ? 'Free' : `${made} made`}</strong>
+          {transfersUnlimited(team) ? activeChip(team) === 'freeHit' && <span className="muted small">Free Hit</span> : <span className="muted small">{freeTransfersLeft(team)} free left</span>}
         </div>
         <div><span className="muted">Cost</span><strong className={hits ? 'error' : ''}>{hits ? `−${hits} pts` : '0'}</strong></div>
       </div>

@@ -1,4 +1,4 @@
-import { RULES, fmtPrice } from '../core/rules.js';
+import { CHIPS, RULES, fmtPrice, scoringName } from '../core/rules.js';
 import { PRICE_BANDS, PRICE_MOVES, VALUE_WEIGHTS } from '../core/pricing.js';
 
 /** The rules as currently configured. `league` switches to the replayed-season wording. */
@@ -17,7 +17,7 @@ export default function RulesView({ league = false, children }) {
         {RULES.freePositions.length > 0 && (
           <li><strong>Free picks</strong> {RULES.freePositions.join(' and ')} cost nothing, and swapping them doesn't use a transfer: pick a new one every week if you like.</li>
         )}
-        <li><strong>Scoring</strong> Half PPR (Sleeper's {RULES.scoring}). Captain scores ×{RULES.captainMultiplier}; the vice takes over if the captain doesn't play.
+        <li><strong>Scoring</strong> {scoringName()} (Sleeper's {RULES.scoring}). Captain scores ×{RULES.captainMultiplier}; the vice takes over if the captain doesn't play.
           {RULES.noCaptain.length > 0 && ` ${RULES.noCaptain.join('s, ')}s can't be captain or vice.`}
         </li>
         {RULES.benchSize > 0 && (
@@ -30,6 +30,12 @@ export default function RulesView({ league = false, children }) {
         ) : (
           <li><strong>Deadline</strong> 12:00 UTC on the day of each week's first game.</li>
         )}
+      </ul>
+
+      <h3 className="section">Chips</h3>
+      <p>Each chip can be played once a season, and only one a week. Play it from the Team tab and confirm it like a transfer. Once confirmed it can't be undone.</p>
+      <ul>
+        {CHIPS.map((c) => <li key={c.id}><strong>{c.name}</strong> {c.blurb}</li>)}
       </ul>
 
       <h3 className="section">Pricing and the injury problem</h3>

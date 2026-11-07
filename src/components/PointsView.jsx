@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { isWeekComplete } from '../core/gameweeks.js';
-import { RULES, fmtPts } from '../core/rules.js';
+import { RULES, chipName, fmtPts } from '../core/rules.js';
 import { scoreWeek, squadIds } from '../core/squad.js';
 
 /** getScores(week, final) resolves to { [id]: { pts, played } }. */
@@ -13,7 +13,7 @@ function useWeekScores(getScores, week, final) {
       .then((s) => live && setScores(s))
       .catch((e) => live && setError(e.message));
     return () => { live = false; };
-  }, [week, final]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [getScores, week, final]);
   return { scores, error };
 }
 
@@ -29,6 +29,7 @@ function WeekCard({ title, subtitle, getScores, week, snapshot, info, final, ope
         <span>
           <strong>{title}</strong>
           <span className="muted small"> {subtitle ?? (final ? 'Final' : 'Live')}</span>
+          {snapshot.chip && <span className="chip-tag">{chipName(snapshot.chip)}</span>}
         </span>
         <span className="week-total">{error ? '!' : result ? fmtPts(result.total) : '…'}</span>
       </button>
@@ -41,13 +42,17 @@ function WeekCard({ title, subtitle, getScores, week, snapshot, info, final, ope
                 <td className="muted">{r.slot}</td>
                 <td>
                   {name(r.id)}
-                  {r.mult > 1 && <span className="armband inline">C</span>}
+                  {r.mult > 1 && <span className="armband inline">{r.mult > RULES.captainMultiplier ? `×${r.mult}` : 'C'}</span>}
+                  {r.bonus > 0 && <span className="chip-bonus">+{fmtPts(r.bonus)}</span>}
                   {r.subbedIn && <span className="muted small"> ↑ sub</span>}
                   {r.id && !r.played && final && <span className="muted small"> (DNP)</span>}
                 </td>
                 <td className="num">{fmtPts(r.pts)}</td>
               </tr>
             ))}
+            {result.chip && result.chip !== 'freeHit' && (
+              <tr><td /><td>{chipName(result.chip)}</td><td className="num ok">+{fmtPts(result.chipPts)}</td></tr>
+            )}
             {result.hits > 0 && (
               <tr><td /><td className="error">Transfer hits</td><td className="num error">−{result.hits}</td></tr>
             )}

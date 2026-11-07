@@ -16,6 +16,9 @@ export function boxScore(stats) {
   return out;
 }
 
+/** Rushing, receiving and defensive TDs in a Sleeper stats object (what Paydirt doubles). */
+export const scoredTds = (stats) => (stats?.rush_td ?? 0) + (stats?.rec_td ?? 0) + (stats?.def_td ?? 0);
+
 /** Add up several weeks of box scores. */
 export function sumBox(rows) {
   const total = {};

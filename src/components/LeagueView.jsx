@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fmtPts } from '../core/rules.js';
+import { RULES, chipName, fmtPts } from '../core/rules.js';
 
 /** League table. Tap a manager to see their team from the last locked week. */
 export default function LeagueView({ api }) {
@@ -44,16 +44,21 @@ function Row({ m, rank, open, toggle }) {
           <td colSpan={4}>
             {m.latest ? (
               <>
-                <div className="muted small">Week {m.latest.week}</div>
+                <div className="muted small">Week {m.latest.week}{m.latest.chip && <span className="chip-tag">{chipName(m.latest.chip)}</span>}</div>
                 <table className="week-table">
                   <tbody>
                     {m.latest.rows.map((r, i) => (
                       <tr key={i}>
                         <td className="muted">{r.slot}</td>
-                        <td>{r.name ?? 'Empty'}{r.mult > 1 && <span className="armband inline">C</span>}</td>
+                        <td>
+                          {r.name ?? 'Empty'}
+                          {r.mult > 1 && <span className="armband inline">{r.mult > RULES.captainMultiplier ? `×${r.mult}` : 'C'}</span>}
+                          {r.bonus > 0 && <span className="chip-bonus">+{fmtPts(r.bonus)}</span>}
+                        </td>
                         <td className="num">{fmtPts(r.pts)}</td>
                       </tr>
                     ))}
+                    {m.latest.chip && m.latest.chip !== 'freeHit' && <tr><td /><td>{chipName(m.latest.chip)}</td><td className="num ok">+{fmtPts(m.latest.chipPts)}</td></tr>}
                     {m.latest.hits > 0 && <tr><td /><td className="error">Transfer hits</td><td className="num error">−{m.latest.hits}</td></tr>}
                   </tbody>
                 </table>

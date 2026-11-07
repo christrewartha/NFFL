@@ -12,7 +12,7 @@ import Shell, { TABS } from './components/Shell.jsx';
 import { DraftBar } from './components/DraftBar.jsx';
 import { useDraft } from './components/useDraft.js';
 import { SeasonContext } from './components/season.js';
-import { withResults } from './core/results.js';
+import { weekWinners, withResults, withWins } from './core/results.js';
 
 const STALE_MS = 30 * 60 * 1000;
 
@@ -92,15 +92,17 @@ export default function App() {
     swap: (a, b) => setTeam((t) => swap(t, a, b)),
     autoLineup: (scoreOf) => setTeam((t) => autoLineup(t, scoreOf)),
   };
-  // Scores for a week, cached once all its games are final.
+  // Scores for a week, cached once all its games are final, and marked with who won
+  // (for Eat the W) from the final scores loaded above.
   const getScores = useCallback(async (week, final) => {
-    const key = `scores:${market.season}:${week}`;
-    const cached = final && load(key);
-    if (cached) return cached;
-    const scores = await fetchWeekScores(market.season, week);
-    if (final) save(key, scores);
-    return scores;
-  }, [market?.season]);
+    const key = `scores:${RULES.scoring}:${market.season}:${week}`;
+    let scores = final && load(key);
+    if (!scores) {
+      scores = await fetchWeekScores(market.season, week);
+      if (final) save(key, scores);
+    }
+    return withWins(scores, weekWinners(results, week));
+  }, [market?.season, results]);
   const openMarket = (filter = 'ALL') => {
     setMarketFilter(filter);
     setTab('market');
@@ -128,7 +130,7 @@ export default function App() {
       </div>
     );
   } else if (tab === 'team') {
-    body = <TeamView team={draft} actions={actions} playersById={playersById} weeks={weeks} openMarket={openMarket} />;
+    body = <TeamView team={draft} saved={draftState.base} actions={actions} playersById={playersById} weeks={weeks} openMarket={openMarket} />;
   } else if (tab === 'market') {
     body = <MarketView team={draft} actions={actions} market={market} playersById={playersById} filter={marketFilter} setFilter={setMarketFilter} />;
   } else if (tab === 'points') {

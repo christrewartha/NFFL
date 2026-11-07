@@ -20,8 +20,23 @@ export const RULES = {
   // Kickers and defences cost nothing and can be swapped without using a transfer,
   // so they're a free weekly pick rather than a drain on budget and transfers.
   freePositions: ['K', 'DEF'],
-  scoring: 'pts_half_ppr',
+  scoring: 'pts_ppr',
+  // Chips: each can be played once a season, one per week, and can't be undone.
+  tripleCaptainMultiplier: 3,
+  paydirtTdPts: 6, // extra per rushing, receiving or defensive TD
+  eatTheWBonus: 3, // per player who plays in a win
 };
+
+export const CHIPS = [
+  { id: 'freeHit', name: 'Free Hit', blurb: 'Unlimited free transfers for one week. After the deadline your squad goes back to how it was at the start of the week.' },
+  { id: 'tripleCaptain', name: 'Triple Captain', blurb: `Your captain scores ×${RULES.tripleCaptainMultiplier} instead of ×${RULES.captainMultiplier}.` },
+  { id: 'paydirt', name: 'Paydirt', blurb: `Rushing, receiving and defensive TDs score double (+${RULES.paydirtTdPts} each). Passing TDs don't count.` },
+  { id: 'eatTheW', name: 'Eat the W', blurb: `+${RULES.eatTheWBonus} for every player who plays in a win.` },
+];
+export const chipName = (id) => CHIPS.find((c) => c.id === id)?.name ?? id;
+
+const SCORING_NAMES = { pts_ppr: 'PPR', pts_half_ppr: 'Half PPR', pts_std: 'Standard' };
+export const scoringName = () => SCORING_NAMES[RULES.scoring] ?? RULES.scoring;
 
 export const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
 

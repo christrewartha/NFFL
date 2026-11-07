@@ -111,7 +111,7 @@ export default function LeagueApp() {
   } else if (!state.week) {
     body = <PointsView team={state.team} weeks={state.weeks} getScores={getScores} />;
   } else if (tab === 'team') {
-    body = <TeamView team={draft} actions={actions} playersById={playersById} weeks={state.weeks} openMarket={openMarket} />;
+    body = <TeamView team={draft} saved={draftState.base} actions={actions} playersById={playersById} weeks={state.weeks} openMarket={openMarket} />;
   } else if (tab === 'market') {
     body = <MarketView team={draft} actions={actions} market={state.market} playersById={playersById} filter={marketFilter} setFilter={setMarketFilter} />;
   } else {

@@ -11,7 +11,8 @@
 import { RULES } from './rules.js';
 import { buildMarket } from './sleeper.js';
 import { PRICE_MOVES, capPriceMoves } from './pricing.js';
-import { boxScore } from './statLines.js';
+import { boxScore, scoredTds } from './statLines.js';
+import { weekWinners } from './results.js';
 import { weekInfo } from './gameweeks.js';
 
 const pts = (stats) => stats?.[RULES.scoring] ?? 0;
@@ -91,8 +92,9 @@ export function replayWeek(data, week) {
   });
   const scores = {};
   const box = {};
+  const winners = weekWinners(data.schedule, week);
   for (const r of data.stats[week] ?? []) {
-    scores[r.player_id] = { pts: pts(r.stats), played: (r.stats?.gp ?? 0) > 0 };
+    scores[r.player_id] = { pts: pts(r.stats), played: (r.stats?.gp ?? 0) > 0, td: scoredTds(r.stats), team: r.team, won: winners.has(r.team) };
     if (r.stats?.gp) box[r.player_id] = boxScore(r.stats);
   }
   return { market, scores, box, weeks };

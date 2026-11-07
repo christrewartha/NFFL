@@ -3,7 +3,7 @@ import { applyChanges, changeSummary, setRole, squadIds } from '../core/squad.js
 
 /**
  * Local tinkering on top of the saved team. Changes are held as an intent (the squad
- * you want plus armbands) and previewed with the same applyChanges the server uses.
+ * you want plus armbands and a chip) and previewed with the same applyChanges the server uses.
  * Nothing is saved until confirm() hands the intent to `commit`.
  */
 export function useDraft(base, byId, commit) {
@@ -33,7 +33,7 @@ export function useDraft(base, byId, commit) {
   const summary = base && draft ? changeSummary(base, draft) : null;
   const edit = (fn) => {
     setNotice(null);
-    setIntent((i) => fn(i ?? { squad: squadIds(base), captain: null, vice: null }));
+    setIntent((i) => fn(i ?? { squad: squadIds(base), captain: null, vice: null, chip: null }));
   };
 
   const actions = {
@@ -43,6 +43,9 @@ export function useDraft(base, byId, commit) {
       const t = setRole(draft, id, role);
       return { ...i, captain: t.captain, vice: t.vice };
     }),
+    // Only an unconfirmed chip can be cancelled: once saved it stays played.
+    playChip: (id) => edit((i) => ({ ...i, chip: id })),
+    cancelChip: () => edit((i) => ({ ...i, chip: null })),
   };
 
   return {

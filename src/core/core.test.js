@@ -230,7 +230,7 @@ test('minCostToFill sums the cheapest players for each empty spot', () => {
 
 test('replay hides fresh absences at the deadline but not ongoing ones', async () => {
   const { replayWeek } = await import('./replay.js');
-  const row = (id, pts, gp) => ({ player_id: id, team: 'A', player: { first_name: id, last_name: 'X', position: 'WR' }, stats: { pts_half_ppr: pts, ...(gp != null && { gp }) } });
+  const row = (id, pts, gp) => ({ player_id: id, team: 'A', player: { first_name: id, last_name: 'X', position: 'WR' }, stats: { [RULES.scoring]: pts, ...(gp != null && { gp }) } });
   const data = {
     schedule: [1, 2, 3].map((week) => ({ week, date: `2025-09-0${week}`, home: 'A', away: 'B', status: 'complete' })),
     seasonProj: [row('fresh', 170), row('ongoing', 170)],
@@ -375,4 +375,70 @@ test('league schedule hides scores until that week\'s results are out', async ()
   assert.equal(seen[0].homeScore, 10);
   assert.equal(seen[1].homeScore, undefined);
   assert.equal(seen[1].awayScore, undefined);
+});
+
+test('chips: once a season, one a week, not in the building week for Free Hit', async () => {
+  const { cannotPlayChip, playChip, activeChip, applyChanges, changeSummary } = await import('./squad.js');
+  let { team, players } = fullSquad();
+  assert.match(cannotPlayChip(team, 'freeHit'), /already free/);
+  assert.equal(cannotPlayChip(team, 'paydirt'), null);
+  team = rollover(team, 10);
+  const byId = new Map(players.map((p) => [p.id, p]));
+  const draft = applyChanges(team, { squad: squadIds(team), chip: 'paydirt' }, byId);
+  assert.equal(activeChip(draft), 'paydirt');
+  assert.equal(changeSummary(team, draft).chip, 'paydirt');
+  assert.match(cannotPlayChip(draft, 'eatTheW'), /one chip per week/);
+  // A later commit without the chip doesn't cancel it.
+  assert.equal(activeChip(applyChanges(draft, { squad: squadIds(draft) }, byId)), 'paydirt');
+  team = rollover(draft, 11);
+  assert.equal(team.history[10].chip, 'paydirt');
+  assert.match(cannotPlayChip(team, 'paydirt'), /Played in Week 10/);
+  assert.throws(() => playChip(team, 'nope'), /Unknown chip/);
+});
+
+test('Free Hit: free transfers for a week, then the squad and bank go back', async () => {
+  const { playChip } = await import('./squad.js');
+  let { team } = fullSquad();
+  team = rollover(team, 10);
+  const before = { ids: squadIds(team), bank: team.bank, ft: team.ftAtWeekStart };
+  team = playChip(team, 'freeHit');
+  for (const pos of ['RB', 'WR', 'TE', 'QB']) team = addPlayer(removePlayer(team, team.starters[slotOf(team, pos)], 60), mk(pos, 40));
+  assert.equal(pendingHits(team), 0);
+  assert.equal(freeTransfersLeft(team), Infinity);
+  const fhSquad = squadIds(team);
+  team = rollover(team, 11);
+  assert.deepEqual(team.history[10].starters.filter(Boolean).sort(), [...fhSquad].sort());
+  assert.equal(team.history[10].hits, 0);
+  assert.deepEqual(squadIds(team).sort(), [...before.ids].sort());
+  assert.equal(team.bank, before.bank);
+  assert.equal(team.ftAtWeekStart, Math.min(RULES.maxBankedTransfers, before.ft + RULES.freeTransfersPerWeek));
+  assert.equal(transfersMade(team), 0);
+});
+
+test('scoreWeek chips: Triple Captain, Paydirt and Eat the W', () => {
+  const info = { a: { pos: 'RB' }, b: { pos: 'WR' }, c: { pos: 'WR' } };
+  const starters = RULES.starterSlots.map(() => null);
+  starters[2] = 'a';
+  starters[6] = 'b';
+  starters[7] = 'c';
+  const base = { starters, bench: [], captain: 'a', vice: 'b', hits: 0 };
+  const scores = {
+    a: { pts: 20, played: true, td: 2, won: true },
+    b: { pts: 10, played: true, td: 1, won: false },
+    c: { pts: 0, played: false, td: 0, won: true },
+  };
+  const plain = scoreWeek(base, scores, info, { final: true });
+  assert.equal(plain.gross, 50);
+
+  const tc = scoreWeek({ ...base, chip: 'tripleCaptain' }, scores, info, { final: true });
+  assert.equal(tc.gross, 70);
+  assert.equal(tc.chipPts, 20);
+
+  const paydirt = scoreWeek({ ...base, chip: 'paydirt' }, scores, info, { final: true });
+  // The captain's TDs are doubled by the armband as well.
+  assert.equal(paydirt.chipPts, 2 * RULES.paydirtTdPts * 2 + RULES.paydirtTdPts);
+  assert.equal(paydirt.gross, 50 + paydirt.chipPts);
+
+  const w = scoreWeek({ ...base, chip: 'eatTheW' }, scores, info, { final: true });
+  assert.equal(w.chipPts, RULES.eatTheWBonus); // c's team won but he didn't play
 });

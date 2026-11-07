@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { RULES, fmtPrice } from '../core/rules.js';
-import { isFreePosition, sellValue } from '../core/squad.js';
+import { RULES, chipName, fmtPrice } from '../core/rules.js';
+import { activeChip, isFreePosition, sellValue } from '../core/squad.js';
 import { playerFor, priceText } from './lookup.js';
 
-const freeText = (n) => (n === Infinity ? 'unlimited (squad-building week)' : String(n));
+const freeText = (n, team) => (n === Infinity ? `unlimited (${activeChip(team) === 'freeHit' ? 'Free Hit' : 'squad-building week'})` : String(n));
 
 /** Pending-changes bar above the tabs, and the confirmation sheet behind it. */
 export function DraftBar({ draftState }) {
@@ -18,8 +18,8 @@ export function DraftBar({ draftState }) {
   const transfers = Math.max(count(summary.out, false), count(summary.in, false));
   const freeSwaps = Math.max(count(summary.out, true), count(summary.in, true));
   const plural = (n, word) => `${n} ${word}${n > 1 ? 's' : ''}`;
-  const headline = [transfers && plural(transfers, 'transfer'), freeSwaps && plural(freeSwaps, 'free K/DEF swap')].filter(Boolean).join(' + ') || 'Armband change';
-  const freeUsed = summary.freeBefore === Infinity ? 0 : summary.freeBefore - summary.freeAfter;
+  const headline = [summary.chip && chipName(summary.chip), transfers && plural(transfers, 'transfer'), freeSwaps && plural(freeSwaps, 'free K/DEF swap')].filter(Boolean).join(' + ') || 'Armband change';
+  const freeUsed = summary.freeAfter === Infinity ? 0 : summary.freeBefore - summary.freeAfter;
   const name = (id) => (playerFor(id, draft, byId) ?? playerFor(id, base, byId))?.name ?? id;
 
   const submit = async () => {
@@ -66,13 +66,15 @@ export function DraftBar({ draftState }) {
               </table>
             )}
             <dl className="sheet-stats">
-              <div><dt>Free transfers used</dt><dd>{freeUsed} (left: {freeText(summary.freeAfter)})</dd></div>
+              {summary.chip && <div><dt>Chip</dt><dd><strong>{chipName(summary.chip)}</strong></dd></div>}
+              <div><dt>Free transfers used</dt><dd>{freeUsed} (left: {freeText(summary.freeAfter, draft)})</dd></div>
               <div><dt>Points cost</dt><dd className={summary.hitsAdded ? 'error' : ''}>{summary.hitsAdded ? `−${summary.hitsAdded} (${RULES.hitCost} per extra transfer)` : 'None'}</dd></div>
               <div><dt>Bank</dt><dd>{fmtPrice(summary.bankBefore)} → {fmtPrice(summary.bankAfter)}</dd></div>
               {(summary.captain || summary.vice) && (
                 <div><dt>Armbands</dt><dd>{summary.captain && `C: ${name(draft.captain)}`}{summary.captain && summary.vice && ', '}{summary.vice && `V: ${name(draft.vice)}`}</dd></div>
               )}
             </dl>
+            {summary.chip && <p className="chip-warning">Once confirmed, {chipName(summary.chip)} can't be undone. It's used for Week {draft.currentWeek} whatever happens.</p>}
             {summary.unfinished ? (
               <p className="error">Pick a replacement for everyone you've sold before confirming.</p>
             ) : (

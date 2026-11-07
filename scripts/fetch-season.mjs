@@ -10,7 +10,7 @@ import { fetchWeekResults } from '../src/core/results.js';
 const season = Number(process.argv[2] ?? 2025);
 const API = 'https://api.sleeper.app';
 const positionQuery = POSITIONS.map((p) => `position[]=${p}`).join('&');
-const STAT_KEYS = ['pts_half_ppr', 'gp', 'off_snp', 'tm_off_snp', ...BOX_KEYS];
+const STAT_KEYS = ['pts_ppr', 'pts_half_ppr', 'gp', 'off_snp', 'tm_off_snp', ...BOX_KEYS];
 
 async function getJson(path) {
   const res = await fetch(`${API}${path}`);

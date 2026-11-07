@@ -8,9 +8,11 @@
 //   currentWeek: the week being edited; createdWeek: the squad-building week (free transfers)
 //   ftAtWeekStart: free transfers available this week (null = unlimited, i.e. building week)
 //   weekStartIds: squad at the start of this week, to count transfers made
+//   weekStart: lineup, prices paid and bank at the start of this week (what a Free Hit returns to)
+//   chipsUsed: { [chip id]: week played }
 //   history: { [week]: locked snapshot }
 
-import { RULES, fitsSlot } from './rules.js';
+import { CHIPS, RULES, chipName, fitsSlot } from './rules.js';
 import { sellPrice } from './pricing.js';
 
 export function newTeam(season, week) {
@@ -28,6 +30,8 @@ export function newTeam(season, week) {
     rolesSet: false,
     ftAtWeekStart: null,
     weekStartIds: [],
+    weekStart: null,
+    chipsUsed: {},
     history: {},
   };
 }
@@ -49,23 +53,51 @@ export function countBy(team, key) {
   return counts;
 }
 
-/** Players in the squad now who weren't at the start of the week. */
 export const isFreePosition = (pos) => RULES.freePositions.includes(pos);
+
+// --- Chips ---------------------------------------------------------------------
+
+/** The chip played for the week being edited, or null. */
+export const activeChip = (team) =>
+  Object.keys(team.chipsUsed ?? {}).find((id) => team.chipsUsed[id] === team.currentWeek) ?? null;
+
+/** Building week or Free Hit: transfers are unlimited and free. */
+export const transfersUnlimited = (team) => isBuildingWeek(team) || activeChip(team) === 'freeHit';
+
+/** Can this chip be played this week? Returns null if so, otherwise the reason. */
+export function cannotPlayChip(team, id) {
+  if (!CHIPS.some((c) => c.id === id)) return 'Unknown chip';
+  const used = team.chipsUsed?.[id];
+  if (used === team.currentWeek) return 'Already played this week';
+  if (used != null) return `Played in Week ${used}`;
+  const active = activeChip(team);
+  if (active) return `You're playing ${chipName(active)} this week (one chip per week)`;
+  if (id === 'freeHit' && (isBuildingWeek(team) || !team.weekStart)) return 'Transfers are already free this week';
+  return null;
+}
+
+export function playChip(team, id) {
+  const reason = cannotPlayChip(team, id);
+  if (reason) throw new Error(reason);
+  return { ...team, chipsUsed: { ...team.chipsUsed, [id]: team.currentWeek } };
+}
+
+// --- Transfers -----------------------------------------------------------------
 
 /** Players in the squad now who weren't at the start of the week (free positions don't count). */
 export function transfersMade(team) {
-  if (isBuildingWeek(team)) return 0;
+  if (transfersUnlimited(team)) return 0;
   const start = new Set(team.weekStartIds);
   return squadIds(team).filter((id) => !start.has(id) && !isFreePosition(team.info[id].pos)).length;
 }
 
 export function freeTransfersLeft(team) {
-  if (isBuildingWeek(team)) return Infinity;
+  if (transfersUnlimited(team)) return Infinity;
   return Math.max(0, team.ftAtWeekStart - transfersMade(team));
 }
 
 export function pendingHits(team) {
-  if (isBuildingWeek(team)) return 0;
+  if (transfersUnlimited(team)) return 0;
   return Math.max(0, transfersMade(team) - team.ftAtWeekStart) * RULES.hitCost;
 }
 
@@ -211,13 +243,15 @@ export function setRole(team, id, role) {
 
 /**
  * Apply a set of pending changes in one go: the squad you want (ids) and, optionally,
- * new armbands. Sells first, then buys, at the prices in byId. Throws if any buy is
+ * new armbands and a chip to play. The chip goes first (a Free Hit makes the transfers
+ * free), then sells, then buys, at the prices in byId. Throws if the chip or any buy is
  * illegal, or (unless `partial`, for a draft mid-transfer) if it would leave a complete
  * squad incomplete. Used for both the draft preview and the server commit, so they agree.
+ * A chip once played stays played: leaving it out of a later commit doesn't cancel it.
  */
-export function applyChanges(team, { squad, captain = null, vice = null }, byId, { partial = false } = {}) {
+export function applyChanges(team, { squad, captain = null, vice = null, chip = null }, byId, { partial = false } = {}) {
   const want = new Set(squad);
-  let next = team;
+  let next = chip && chip !== activeChip(team) ? playChip(team, chip) : team;
   for (const id of squadIds(team)) if (!want.has(id)) next = removePlayer(next, id, byId.get(id)?.price);
   const have = new Set(squadIds(next));
   for (const id of squad) {
@@ -240,12 +274,14 @@ export function changeSummary(base, draft) {
   const added = [...after].filter((id) => !before.has(id));
   const captain = draft.captain !== base.captain;
   const vice = draft.vice !== base.vice;
+  const chip = activeChip(draft) !== activeChip(base) ? activeChip(draft) : null;
   return {
     out,
     in: added,
     captain,
     vice,
-    changed: out.length > 0 || added.length > 0 || captain || vice,
+    chip,
+    changed: out.length > 0 || added.length > 0 || captain || vice || Boolean(chip),
     freeBefore: freeTransfersLeft(base),
     freeAfter: freeTransfersLeft(draft),
     hitsAdded: pendingHits(draft) - pendingHits(base),
@@ -300,34 +336,51 @@ export function refundFreePositions(team) {
 /**
  * Lock the team for every week whose deadline has passed and move on to `week`.
  * Unused free transfers carry over (capped); the building week leaves none to carry.
+ * After a Free Hit week the squad goes back to how it was at the start of that week,
+ * and the free transfers it didn't need carry over as normal.
  */
 export function rollover(team, week) {
   if (week == null || week <= team.currentWeek) return team;
-  const history = { ...team.history };
-  for (let w = team.currentWeek; w < week; w++) {
-    const first = w === team.currentWeek;
-    history[w] = {
-      starters: [...team.starters],
-      bench: [...team.bench],
-      captain: team.captain,
-      vice: team.vice,
-      transfers: first ? transfersMade(team) : 0,
-      hits: first ? pendingHits(team) : 0,
-    };
-  }
-  const carried = isBuildingWeek(team) ? 0 : freeTransfersLeft(team);
+  const chip = activeChip(team);
+  const freeHit = chip === 'freeHit' && team.weekStart;
+  const history = {
+    ...team.history,
+    [team.currentWeek]: { ...lineupOf(team), transfers: transfersMade(team), hits: pendingHits(team), ...(chip && { chip }) },
+  };
+  const after = freeHit ? { ...team, ...team.weekStart } : team;
+  for (let w = team.currentWeek + 1; w < week; w++) history[w] = { ...lineupOf(after), transfers: 0, hits: 0 };
+  const carried = isBuildingWeek(team) ? 0 : freeHit ? team.ftAtWeekStart : freeTransfersLeft(team);
   const ft = Math.min(RULES.maxBankedTransfers, carried + (week - team.currentWeek) * RULES.freeTransfersPerWeek);
-  return { ...team, history, currentWeek: week, ftAtWeekStart: ft, weekStartIds: squadIds(team) };
+  return {
+    ...after,
+    history,
+    currentWeek: week,
+    ftAtWeekStart: ft,
+    weekStartIds: squadIds(after),
+    weekStart: { ...lineupOf(after), buy: { ...after.buy }, bank: after.bank, rolesSet: after.rolesSet },
+  };
 }
 
+const lineupOf = (team) => ({ starters: [...team.starters], bench: [...team.bench], captain: team.captain, vice: team.vice });
+
 /**
- * Score a locked week. scores: { [id]: { pts, played } }.
+ * Score a locked week. scores: { [id]: { pts, played, td, won } } (td: rushing, receiving
+ * and defensive TDs; won: played in a win).
  * When final, starters who didn't play are replaced by the first eligible bench player
  * who did (in bench order), and the vice-captain takes the armband if the captain sat out.
+ * Rows carry `bonus`, the chip's extra points, which are already included in `pts`.
  */
 export function scoreWeek(snapshot, scores, info, { final = false } = {}) {
   const played = (id) => Boolean(id && scores[id]?.played);
   const ptsOf = (id) => (id ? scores[id]?.pts ?? 0 : 0);
+  const chip = snapshot.chip ?? null;
+  const captainMult = chip === 'tripleCaptain' ? RULES.tripleCaptainMultiplier : RULES.captainMultiplier;
+  const bonusOf = (id, mult) => {
+    if (!id) return 0;
+    if (chip === 'paydirt') return (scores[id]?.td ?? 0) * RULES.paydirtTdPts * mult;
+    if (chip === 'eatTheW') return played(id) && scores[id]?.won ? RULES.eatTheWBonus : 0;
+    return 0;
+  };
   const starters = [...snapshot.starters];
   const bench = [...snapshot.bench];
   const subbedIn = new Set();
@@ -344,10 +397,14 @@ export function scoreWeek(snapshot, scores, info, { final = false } = {}) {
   if (final && !played(captain)) captain = starters.includes(snapshot.vice) && played(snapshot.vice) ? snapshot.vice : null;
 
   const rows = starters.map((id, i) => {
-    const mult = id && id === captain ? RULES.captainMultiplier : 1;
-    return { slot: RULES.starterSlots[i], id, pts: ptsOf(id) * mult, mult, played: played(id), subbedIn: subbedIn.has(id) };
+    const mult = id && id === captain ? captainMult : 1;
+    const bonus = bonusOf(id, mult);
+    return { slot: RULES.starterSlots[i], id, pts: ptsOf(id) * mult + bonus, mult, bonus, played: played(id), subbedIn: subbedIn.has(id) };
   });
-  const benchRows = bench.map((id) => ({ slot: 'BN', id, pts: ptsOf(id), mult: 1, played: played(id), subbedIn: false }));
+  const benchRows = bench.map((id) => ({ slot: 'BN', id, pts: ptsOf(id), mult: 1, bonus: 0, played: played(id), subbedIn: false }));
   const gross = rows.reduce((s, r) => s + r.pts, 0);
-  return { rows, benchRows, gross, hits: snapshot.hits ?? 0, total: gross - (snapshot.hits ?? 0) };
+  const chipPts = chip === 'tripleCaptain'
+    ? rows.filter((r) => r.mult > 1).reduce((s, r) => s + ptsOf(r.id) * (r.mult - RULES.captainMultiplier), 0)
+    : rows.reduce((s, r) => s + r.bonus, 0);
+  return { rows, benchRows, gross, chip, chipPts, hits: snapshot.hits ?? 0, total: gross - (snapshot.hits ?? 0) };
 }

@@ -208,6 +208,23 @@ button.mini { width: 30px; height: 30px; border-radius: 50%; padding: 0; font-si
 .draft-bar button { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); }
 .draft-bar button.primary { background: var(--accent); border-color: var(--accent); }
 .confirm-table { margin-bottom: 12px; }
+.chip-warning { color: var(--gold); font-size: 14px; }
+
+/* Chips */
+.chip-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 0 0 8px; }
+.chip-card {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0;
+  padding: 7px 4px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface);
+}
+.chip-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.chip-status { font-size: 10px; color: var(--muted); }
+.chip-card.chip-on { border-color: var(--gold); background: rgba(245, 197, 66, 0.15); }
+.chip-card.chip-on .chip-status { color: var(--gold); font-weight: 600; }
+.chip-card.chip-pending { border: 1px dashed var(--gold); }
+.chip-card.chip-pending .chip-status { color: var(--gold); }
+.chip-card.chip-used, .chip-card.chip-blocked { opacity: 0.45; }
+.chip-tag { margin-left: 8px; padding: 1px 6px; border-radius: 6px; background: var(--gold); color: #222; font-size: 11px; font-weight: 700; }
+.chip-bonus { margin-left: 6px; color: var(--gold); font-size: 12px; font-weight: 600; }
 .ok { color: var(--accent); }
 .app-main { padding-bottom: 160px; }
 

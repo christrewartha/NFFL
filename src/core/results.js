@@ -39,3 +39,21 @@ export function withResults(schedule, results) {
     return r ? { ...g, homeScore: r.homeScore, awayScore: r.awayScore } : g;
   });
 }
+
+/** Teams that won their game in `week`, from a schedule with final scores. */
+export function weekWinners(schedule, week) {
+  const winners = new Set();
+  for (const g of schedule) {
+    if (g.week !== week || g.homeScore == null || g.awayScore == null) continue;
+    if (g.homeScore > g.awayScore) winners.add(g.home);
+    else if (g.awayScore > g.homeScore) winners.add(g.away);
+  }
+  return winners;
+}
+
+/** Mark each player's score with whether his team won. scores: { [id]: { team, ... } }. */
+export function withWins(scores, winners) {
+  const out = {};
+  for (const [id, s] of Object.entries(scores)) out[id] = { ...s, won: winners.has(s.team) };
+  return out;
+}

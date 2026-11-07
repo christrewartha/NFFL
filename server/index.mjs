@@ -129,13 +129,14 @@ const routes = {
     const { season, c, team } = await context(manager, league);
     if (c.updating) throw new HttpError(409, `The Week ${c.updating.week} deadline has passed and it's being processed. Your changes weren't saved.`);
     if (!c.open) throw new HttpError(409, 'The season is over');
-    const { squad, captain = null, vice = null } = await body(req);
+    const { squad, captain = null, vice = null, chip = null } = await body(req);
     const ids = Array.isArray(squad) ? squad.filter((id) => typeof id === 'string') : null;
     if (!ids || ids.length !== squad.length || new Set(ids).size !== ids.length || ids.length > 15) throw new HttpError(400, 'Bad squad');
     if ([captain, vice].some((id) => id != null && typeof id !== 'string')) throw new HttpError(400, 'Bad armband');
+    if (chip != null && typeof chip !== 'string') throw new HttpError(400, 'Bad chip');
     let next;
     try {
-      next = applyChanges(team, { squad: ids, captain, vice }, season[c.open - 1].byId);
+      next = applyChanges(team, { squad: ids, captain, vice, chip }, season[c.open - 1].byId);
     } catch (e) {
       throw new HttpError(400, e.message);
     }
@@ -186,6 +187,8 @@ const routes = {
           week: latest.week,
           rows: latest.rows.map((r) => ({ ...r, name: team.info[r.id]?.name ?? null, pos: team.info[r.id]?.pos ?? null })),
           hits: latest.hits,
+          chip: latest.chip,
+          chipPts: latest.chipPts,
         },
       });
     }

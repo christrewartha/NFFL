@@ -6,7 +6,7 @@ import ChipsBar from './ChipsBar.jsx';
 import { injuryShort, playerFor, shortName } from './lookup.js';
 import { RULES, fmtPrice, fmtPts } from '../core/rules.js';
 import {
-  activeChip, canCaptain, canSwap, freeTransfersLeft, isFreePosition, isComplete, pendingHits, sellValue, squadIds, transfersUnlimited,
+  activeChip, canCaptain, canSwap, freeTransfersLeft, isFreePosition, isComplete, isLocked, pendingHits, sellValue, squadIds, transfersUnlimited,
 } from '../core/squad.js';
 
 // One pitch row per position, in lineup order. K and DEF share a row, as do TE and FLEX.
@@ -27,16 +27,20 @@ const FreePicksDivider = () => (
 );
 
 export function deadlineParts(weeks, week) {
-  const w = weeks.find((x) => x.week === week);
-  if (!w) return { day: '-', time: '' };
-  const d = new Date(w.deadline);
+  return timeParts(weeks.find((x) => x.week === week)?.deadline);
+}
+
+function timeParts(at) {
+  if (at == null) return { day: '-', time: '' };
+  const d = new Date(at);
   return {
     day: d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }),
     time: d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
   };
 }
 
-export default function TeamView({ team, saved, actions: teamActions, playersById, weeks, openMarket }) {
+/** `locks` (online league): players whose game has kicked off this week; see squad.js. */
+export default function TeamView({ team, saved, actions: teamActions, playersById, weeks, openMarket, locks }) {
   const [sheetLoc, setSheetLoc] = useState(null);
   const [swapFrom, setSwapFrom] = useState(null);
   const [view, setView] = useState('pitch');
@@ -50,6 +54,9 @@ export default function TeamView({ team, saved, actions: teamActions, playersByI
   const ft = freeTransfersLeft(team);
   const hits = pendingHits(team);
   const deadline = deadlineParts(weeks, team.currentWeek);
+  const locked = (id) => isLocked(team, id, locks, playersById);
+  // Once the week has kicked off, the next lock is the next kickoff.
+  const nextLock = locks?.chips ? { label: locks.next ? 'Next kickoff' : 'All games', ...(locks.next ? timeParts(locks.next) : { day: 'Kicked off', time: '' }) } : null;
 
   const tap = (loc) => {
     if (swapFrom) {
@@ -66,7 +73,7 @@ export default function TeamView({ team, saved, actions: teamActions, playersByI
     const p = player(id);
     const label = loc.list === 'starters' ? RULES.starterSlots[loc.index] : `BN${loc.index + 1}`;
     const isFrom = swapFrom && swapFrom.list === loc.list && swapFrom.index === loc.index;
-    const cls = ['spot', !p && 'spot-empty', isFrom && 'spot-selected', swapFrom && !isFrom && (canSwap(team, swapFrom, loc) ? 'spot-target' : 'spot-dim')]
+    const cls = ['spot', !p && 'spot-empty', locked(id) && 'spot-locked', isFrom && 'spot-selected', swapFrom && !isFrom && (canSwap(team, swapFrom, loc) ? 'spot-target' : 'spot-dim')]
       .filter(Boolean)
       .join(' ');
     return (
@@ -79,6 +86,7 @@ export default function TeamView({ team, saved, actions: teamActions, playersByI
               {id === team.captain && <span className="armband">C</span>}
               {id === team.vice && <span className="armband vice">V</span>}
               {p.injury && <span className="inj-badge">{injuryShort(p.injury)}</span>}
+              {locked(id) && <span className="lock-badge" title="His game has kicked off">🔒</span>}
             </span>
             <span className="spot-name">{shortName(p)}</span>
             <span className="spot-meta">
@@ -95,30 +103,40 @@ export default function TeamView({ team, saved, actions: teamActions, playersByI
   const sheetId = sheetLoc ? at(sheetLoc) : null;
   const sheetPlayer = player(sheetId);
   const captainable = canCaptain(team, sheetId);
+  const sheetLocked = locked(sheetId);
   const close = () => setSheetLoc(null);
-  const actions = sheetPlayer
-    ? [
-        { label: captainable ? 'Captain' : `${sheetPlayer.pos}s can't captain`, disabled: !captainable || team.captain === sheetId, onClick: () => { teamActions.setRole(sheetId, 'captain'); close(); } },
-        { label: 'Vice-captain', disabled: !captainable || team.vice === sheetId, onClick: () => { teamActions.setRole(sheetId, 'vice'); close(); } },
-        HAS_BENCH && { label: 'Substitute', primary: true, onClick: () => { setSwapFrom(sheetLoc); close(); } },
-        {
-          label: isFreePosition(sheetPlayer.pos) ? 'Swap (free)' : `Sell (${fmtPrice(sellValue(team, sheetId, sheetPlayer.price))})`,
-          danger: true,
-          onClick: () => { teamActions.sell(sheetPlayer); close(); openMarket(sheetPlayer.pos); },
-        },
-      ].filter(Boolean)
-    : [];
+  const actions = sheetPlayer && sheetLocked
+    ? [{ label: 'Locked: his game has kicked off', disabled: true }]
+    : sheetPlayer
+      ? [
+          { label: captainable ? 'Captain' : `${sheetPlayer.pos}s can't captain`, disabled: !captainable || team.captain === sheetId, onClick: () => { teamActions.setRole(sheetId, 'captain'); close(); } },
+          { label: 'Vice-captain', disabled: !captainable || team.vice === sheetId, onClick: () => { teamActions.setRole(sheetId, 'vice'); close(); } },
+          HAS_BENCH && { label: 'Substitute', primary: true, onClick: () => { setSwapFrom(sheetLoc); close(); } },
+          {
+            label: isFreePosition(sheetPlayer.pos) ? 'Swap (free)' : `Sell (${fmtPrice(sellValue(team, sheetId, sheetPlayer.price))})`,
+            danger: true,
+            onClick: () => { teamActions.sell(sheetPlayer); close(); openMarket(sheetPlayer.pos); },
+          },
+        ].filter(Boolean)
+      : [];
 
   return (
     <div>
       <div className="summary">
-        <div><span className="muted">Week {team.currentWeek} deadline</span><strong>{deadline.day}</strong><span className="muted small">{deadline.time}</span></div>
+        {nextLock ? (
+          <div><span className="muted">{nextLock.label}</span><strong>{nextLock.day}</strong><span className="muted small">{nextLock.time}</span></div>
+        ) : (
+          <div><span className="muted">Week {team.currentWeek} {locks ? 'first kickoff' : 'deadline'}</span><strong>{deadline.day}</strong><span className="muted small">{deadline.time}</span></div>
+        )}
         <div><span className="muted">Projected</span><strong>{fmtPts(projected - hits)}</strong>{hits > 0 && <span className="error small">incl. −{hits} hit</span>}</div>
         <div><span className="muted">Bank</span><strong>{fmtPrice(team.bank)}</strong></div>
         <div><span className="muted">Free transfers</span><strong>{transfersUnlimited(team) ? '∞' : ft}</strong></div>
       </div>
 
-      <ChipsBar team={team} saved={saved} actions={teamActions} />
+      <ChipsBar team={team} saved={saved} actions={teamActions} locks={locks} />
+      {locks?.chips && (
+        <div className="notice small">Week {team.currentWeek} has kicked off. 🔒 players are locked; everyone else can still be sold, bought or given the armband until their game starts.</div>
+      )}
       {chip === 'freeHit' && (
         <div className="notice">Free Hit: transfers are free this week. After the deadline your squad goes back to how it was at the start of Week {team.currentWeek}.</div>
       )}

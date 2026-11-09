@@ -1,46 +1,60 @@
-// Online league: a past season replayed one gameweek per day. Pure, shared by the
-// server (which is authoritative) and the browser (for display).
+// Online league: the live NFL season. Pure, shared by the server (which is authoritative)
+// and the browser (for display).
+//
+// Each player locks at his team's scheduled kickoff, by the clock, never by game state
+// (polling lag would leave a window after kickoff). A week is open from when the previous
+// week is processed until its own processing, PROCESS_HOURS after its last kickoff, when
+// the final scores are taken and the next week opens with new prices.
 
-const TIME_ZONE = 'Europe/London';
-
-/** Epoch ms for a wall-clock date and time in the UK, e.g. ('2026-11-10', '20:00'). */
-export function ukTime(date, time) {
-  const [y, m, d] = date.split('-').map(Number);
-  const [hh, mm] = time.split(':').map(Number);
-  const asUtc = Date.UTC(y, m - 1, d, hh, mm);
-  // Find the UK offset at that moment (GMT or BST) and shift by it.
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat('en-GB', { timeZone: TIME_ZONE, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-      .formatToParts(new Date(asUtc))
-      .map((p) => [p.type, p.value]),
-  );
-  const shown = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute));
-  return asUtc - (shown - asUtc);
-}
-
-const addDays = (date, n) => {
-  const [y, m, d] = date.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
-};
+export const PROCESS_HOURS = 8;
 
 /**
- * Deadlines for a league: week 1 at `deadlineTime` (UK) on `startDate`, then one week a
- * day at the same clock time. At each deadline teams lock and the league goes offline
- * for `updateMinutes` while the week is processed. Then the results appear and the next
- * week opens.
- *   locked:   the deadline has passed (no more changes)
- *   complete: the update window is over (results are public)
+ * The weeks of the season. schedule: [{ week, home, away, kickoff }] (kickoff in epoch ms).
+ * Weeks before startWeek (before the league began) count as done, marked preLeague.
+ *   deadline:  the week's first kickoff (chips must be played before it)
+ *   processAt: when the week's final scores are taken and the next week opens
+ *   locked:    the first game has kicked off
+ *   complete:  processed (points are final)
  */
-export function leagueWeeks({ startDate, deadlineTime, weeks, updateMinutes = 0 }, now = Date.now()) {
-  return Array.from({ length: weeks }, (_, i) => {
-    const deadline = ukTime(addDays(startDate, i), deadlineTime);
-    const reopens = deadline + updateMinutes * 60 * 1000;
-    return { week: i + 1, deadline, reopens, locked: deadline <= now, complete: reopens <= now };
+export function leagueWeeks(schedule, startWeek, now = Date.now()) {
+  const total = Math.max(0, ...schedule.map((g) => g.week));
+  return Array.from({ length: total }, (_, i) => {
+    const week = i + 1;
+    const kickoffs = schedule.filter((g) => g.week === week && Number.isFinite(g.kickoff)).map((g) => g.kickoff);
+    const deadline = kickoffs.length ? Math.min(...kickoffs) : null;
+    const processAt = kickoffs.length ? Math.max(...kickoffs) + PROCESS_HOURS * 60 * 60 * 1000 : null;
+    const before = week < startWeek;
+    return {
+      week,
+      deadline,
+      processAt,
+      locked: before || (deadline != null && deadline <= now),
+      complete: before || (processAt != null && processAt <= now),
+      ...(before && { preLeague: true }),
+    };
   });
 }
 
-/** The week open for changes, or null once the last deadline has passed. */
-export const leagueOpenWeek = (weeks) => weeks.find((w) => !w.locked)?.week ?? null;
+/** The week open for changes, or null once the season is over. */
+export const leagueOpenWeek = (weeks) => weeks.find((w) => !w.complete)?.week ?? null;
 
-/** The week currently being processed (locked, results not yet out), or null. */
-export const leagueUpdating = (weeks) => weeks.find((w) => w.locked && !w.complete) ?? null;
+/**
+ * What has locked so far in `week`: { teams: NFL teams whose game has kicked off,
+ * chips: true once any game has, next: the next kickoff still to come (or null) }.
+ * This is the `locks` the squad functions take.
+ */
+export function weekLocks(schedule, week, now = Date.now()) {
+  const games = schedule.filter((g) => g.week === week);
+  const started = games.filter((g) => g.kickoff <= now);
+  const upcoming = games.filter((g) => !(g.kickoff <= now)).map((g) => g.kickoff);
+  return {
+    teams: new Set(started.flatMap((g) => [g.home, g.away])),
+    chips: started.length > 0,
+    next: upcoming.length ? Math.min(...upcoming) : null,
+  };
+}
+
+/** Kickoff (epoch ms) of `team`'s game in `week`, or null on a bye. */
+export function kickoffOf(schedule, week, team) {
+  return schedule.find((g) => g.week === week && (g.home === team || g.away === team))?.kickoff ?? null;
+}

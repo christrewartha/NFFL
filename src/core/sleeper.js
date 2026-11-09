@@ -81,16 +81,31 @@ export async function fetchMarket({ fetchFn = globalThis.fetch.bind(globalThis),
   const schedule = await getJson(fetchFn, `/schedule/nfl/regular/${season}`);
   const weeks = weekInfo(schedule);
   const week = openWeek(weeks, now);
+  const players = await marketFor(fetchFn, season, weeks, week);
+  return { players, schedule, season, week, syncedAt: Date.now() };
+}
 
+/** The NFL season Sleeper is on now, e.g. 2026. */
+export async function fetchCurrentSeason({ fetchFn = globalThis.fetch.bind(globalThis) } = {}) {
+  const state = await getJson(fetchFn, '/v1/state/nfl');
+  return Number(state.league_season || state.season);
+}
+
+/** The market for one week of a season, priced from what Sleeper knows now (no price caps). */
+export async function fetchWeekMarket(season, week, { fetchFn = globalThis.fetch.bind(globalThis) } = {}) {
+  const schedule = await getJson(fetchFn, `/schedule/nfl/regular/${season}`);
+  return marketFor(fetchFn, season, weekInfo(schedule), week);
+}
+
+async function marketFor(fetchFn, season, weeks, week) {
   const [seasonProj, seasonStats, weekProj] = await Promise.all([
     getJson(fetchFn, `/projections/nfl/${season}?season_type=regular&${positionQuery}`),
     getJson(fetchFn, `/stats/nfl/${season}?season_type=regular&${positionQuery}`).catch(() => []),
     week ? getJson(fetchFn, `/projections/nfl/${season}/${week}?season_type=regular&${positionQuery}`) : [],
   ]);
-
   const players = buildMarket({ seasonProj, seasonStats, weekProj, weeks, week });
   if (players.length < 100) throw new Error('Sleeper returned too few players.');
-  return { players, schedule, season, week, syncedAt: Date.now() };
+  return players;
 }
 
 /** One week's stats, keyed by player id: { [id]: { pts, played, td, team } }. Add `won` with withWins(). */

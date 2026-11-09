@@ -4,9 +4,10 @@ import { applyChanges, changeSummary, setRole, squadIds } from '../core/squad.js
 /**
  * Local tinkering on top of the saved team. Changes are held as an intent (the squad
  * you want plus armbands and a chip) and previewed with the same applyChanges the server uses.
- * Nothing is saved until confirm() hands the intent to `commit`.
+ * Nothing is saved until confirm() hands the intent to `commit`. `locks` (online league)
+ * are the players whose game has kicked off; see squad.js.
  */
-export function useDraft(base, byId, commit) {
+export function useDraft(base, byId, commit, locks) {
   const [intent, setIntent] = useState(null);
   const [notice, setNotice] = useState(null);
   const committing = useRef(false);
@@ -16,7 +17,7 @@ export function useDraft(base, byId, commit) {
 
   // A new saved team (our commit, or the deadline rolling over) replaces the draft.
   useEffect(() => {
-    if (!committing.current && intentRef.current) setNotice('The deadline passed, so your unconfirmed changes were discarded.');
+    if (!committing.current && intentRef.current) setNotice('The week moved on, so your unconfirmed changes were discarded.');
     committing.current = false;
     setIntent(null);
   }, [baseKey]);
@@ -24,11 +25,11 @@ export function useDraft(base, byId, commit) {
   const draft = useMemo(() => {
     if (!intent || !base) return base;
     try {
-      return applyChanges(base, intent, byId, { partial: true });
+      return applyChanges(base, intent, byId, { partial: true, locks });
     } catch {
       return base;
     }
-  }, [intent, base, byId]);
+  }, [intent, base, byId, locks]);
 
   const summary = base && draft ? changeSummary(base, draft) : null;
   const edit = (fn) => {

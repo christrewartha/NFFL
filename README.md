@@ -35,7 +35,7 @@ Price is set from expected points per game, using three signals:
 
 **Prices track quality, not availability.** A player listed Out/IR/Sus is priced on form alone until he's back, so injured stars don't crash and rebound. The projection shown in the app is still zeroed for those players (and quartered for Doubtful), because Sleeper's projections often ignore injury status.
 
-**Weekly moves are capped** (`PRICE_MOVES`): up to £0.3m up and £0.1m down a week, so prices rise more easily than they fall, as in FPL. The replay uses this. The live app doesn't yet, because it needs last week's prices.
+**Weekly moves are capped** (`PRICE_MOVES`): up to £0.3m up and £0.1m down a week, so prices rise more easily than they fall, as in FPL. The replay and the online league use this. Solo play doesn't, because it keeps no record of last week's prices.
 
 Each position has its own price band. The replacement-level player (e.g. RB48) gets the minimum price and the second-best player gets the maximum, with a straight line in between. Kickers and defences are priced at zero. The cheapest possible squad costs about £58.5m, which leaves about £41.5m for upgrades.
 
@@ -64,29 +64,28 @@ node scripts/replay.mjs 2025 --managers 1000    # writes reports/replay-2025.md 
 
 ## Online league
 
-Play a past season with friends, one gameweek a day. The server holds the season, prices and teams, checks every transfer, and only releases a week's scores once its deadline passes.
+The live NFL season, FPL style. Everyone signs up for an account with one team, and every team goes on the **overall table**. **Mini-leagues** are private tables for groups of friends, joined with an invite code or link. The server holds the calendar, prices and teams, checks every transfer, and scores the week live.
 
-### Set up a league
+### Run it
 
 ```sh
 npm install
-npm run build                                   # the server serves the built app from dist/
-node scripts/fetch-season.mjs 2022              # once per season you want to replay
-npm run admin -- create --name "The Crew" --season 2022 --start 2026-11-10 --deadline 22:00 --update 60
-npm start                                       # http://localhost:8787
+npm run build      # the server serves the built app from dist/
+npm start          # http://localhost:8787/league
 ```
 
-`create` prints a six-letter league code. Send your friends `https://your.domain/?code=XXXXXX`. They pick a name and a 4–8 digit PIN, and use the same name and PIN to sign back in. Other admin commands: `npm run admin -- list`, `managers <CODE>`, `reset-pin <CODE> <name> <pin>`, and `set <CODE> [--start YYYY-MM-DD] [--deadline HH:MM] [--update MINUTES]` to change a league's schedule.
+On first start the server sets itself up: it asks Sleeper which season it is, loads the calendar from ESPN, and begins the league in the first week that hasn't kicked off yet. It prices that week and is ready in a few seconds. Admin commands: `npm run admin -- status`, `accounts`, `leagues`, `reset-password <name> <password>` and `start-week <n>` (before anyone has played a week).
 
-- **Clock:** week 1's deadline is `--deadline` (UK time, default 22:00) on `--start`. Each later week is the same time on the next day, so a season takes 18 days.
-- **Update window:** at each deadline, teams lock and the league goes offline for `--update` minutes (default 60). The app shows an *Updating* screen with a countdown and refuses changes, and the server locks every team for the week. When the window ends, the week's points, the new prices and the next week appear together, and open apps refresh themselves. Before week 1 everyone builds their squad with unlimited free transfers. Someone who joins late starts in the current week.
-- **Prices:** the replay pricing, with injured players priced on form and weekly moves capped (`PRICE_MOVES`).
-- **Changes are drafted, then confirmed.** Transfers and armband changes stay in a local draft. Nothing reaches the server until the manager reviews and confirms them: out/in at their prices, free transfers used, points cost and bank before/after. The server applies the batch all-or-nothing with the same `applyChanges` the preview uses, and refuses a half-finished transfer. If a deadline passes mid-draft, the draft is discarded and the manager is told. Solo play works the same way.
-- **League tab:** the table, plus each rival's team from the last locked week.
-- **Game results:** the game log shows each finished game's result from the team's side, such as *W 44–21*. Final scores come from ESPN's public scoreboard: `fetch-season.mjs` saves them for replayed seasons, and solo play gets them through the server. A league only receives scores for weeks whose results are out.
-- **Box scores:** a player's sheet shows his last game (points plus yards, TDs, receptions and so on) and season totals, and each game log row has that week's box score. Seasons fetched before box scores and results were added only have points: refresh with `node scripts/fetch-season.mjs <season>`, then restart the server. It logs a warning if the box scores are missing.
-- **Game log and byes:** tap *Season* on a player's sheet to see his whole season: points for weeks already played, then fixtures still to come. The Team tab's *Fixtures & byes* view shows the squad against the next 6 weeks, with byes highlighted and counted, because a player on bye scores zero with no bench. The server only sends results for weeks whose deadline has passed.
-- **Storage:** one SQLite file, `server/nffl.db`, using Node's built-in `node:sqlite` (Node 24). See *Backups* below.
+- **Accounts:** a name and a password (6+ characters). There's no email, so forgotten passwords are reset with the admin command.
+- **Mini-leagues:** anyone can create one from the Leagues tab, which gives a six-letter code and an invite link (`/league?join=CODE`). Someone who opens the link and signs up (or signs in) joins automatically.
+- **Calendar:** kickoff times, game status and final scores come from ESPN's scoreboard. Refreshed twice a day, and every couple of minutes for a week whose games are on.
+- **Rolling locks:** each player locks at his team's scheduled kickoff, by the server's clock (never by game state, which lags). A locked player can't be sold, bought or given an armband. The armband can move to any player whose game hasn't started; moving it off a captain who has played gives up his double. Chips must be played before the week's first kickoff. `applyChanges` enforces all of this with `weekLocks` (`src/core/league.js`), on the server and in the app's draft preview alike.
+- **Weekly cycle:** a week opens when the previous one is processed, 8 hours after its last kickoff (normally Tuesday morning UK). Its prices are set then and stored, capped against last week's (`PRICE_MOVES`). Until the first kickoff, projections and injury news refresh every 3 hours without moving prices. While games are on the server polls Sleeper every 2 minutes and the Points and Leagues tabs show live, provisional points. At processing, final scores are stored, every team rolls over and the next week opens. Later stat corrections are ignored. The first week's prices are provisional if the league starts before the previous week is processed, and are set again (once) when it is.
+- **Rivals' teams** are revealed player by player as each game kicks off, and in full once the last game has (players on a bye never lock).
+- **Joining late:** a new team gets a free squad-building week, starting in the open week, and all four chips.
+- **Changes are drafted, then confirmed.** Transfers and armband changes stay in a local draft. Nothing reaches the server until the manager reviews and confirms them: out/in at their prices, free transfers used, points cost and bank before/after. The server applies the batch all-or-nothing with the same `applyChanges` the preview uses, and refuses a half-finished transfer. Solo play works the same way.
+- **Game logs** come straight from Sleeper, as in solo play.
+- **Storage:** one SQLite file, `server/nffl.db`, using Node's built-in `node:sqlite` (Node 24). See *Backups* below. The `leagues`, `managers` and `sessions` tables are left over from the 2022 replay trial and aren't used.
 - **Dev:** `npm run dev` proxies `/api` to a local server, so `http://localhost:5173/league` works for UI work.
 
 ### Backups
@@ -176,10 +175,10 @@ src/core/        Pure JS, no React. Unit-tested in core.test.js.
   gameweeks.js   deadlines, open week, byes (from the schedule)
   squad.js       squad building, lineup swaps, transfers, rollover, scoring and autosubs
   replay.js      past-season markets for the replay
-  league.js      online league clock (daily UK deadlines)
+  league.js      online league calendar and rolling locks
   sleeper.js     Sleeper API fetch and market build
   storage.js     localStorage behind a tiny interface
-src/components/  React UI: Team (pitch), Transfers (market), Points, League, Rules
+src/components/  React UI: Team (pitch), Transfers (market), Points, Leagues, Rules
 src/App.jsx      solo play against live Sleeper data
 src/LeagueApp.jsx online league (/league), talking to the server
 server/          league server: index.mjs (HTTP + API), game.mjs, store.mjs (SQLite), admin.mjs (CLI)

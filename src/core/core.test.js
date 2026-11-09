@@ -250,30 +250,93 @@ test('capPriceMoves limits rises and falls separately', async () => {
   assert.deepEqual(capped.map((p) => p.price), [53, 99, 70]);
 });
 
-test('league clock: daily UK deadlines across the clocks going back', async () => {
-  const { leagueWeeks, leagueOpenWeek, ukTime } = await import('./league.js');
-  assert.equal(new Date(ukTime('2026-07-01', '20:00')).toISOString(), '2026-07-01T19:00:00.000Z'); // BST
-  assert.equal(new Date(ukTime('2026-12-01', '20:00')).toISOString(), '2026-12-01T20:00:00.000Z'); // GMT
-  const weeks = leagueWeeks({ startDate: '2026-10-24', deadlineTime: '20:00', weeks: 3 }, ukTime('2026-10-25', '21:00'));
-  assert.deepEqual(weeks.map((w) => new Date(w.deadline).toISOString()), ['2026-10-24T19:00:00.000Z', '2026-10-25T20:00:00.000Z', '2026-10-26T20:00:00.000Z']);
-  assert.deepEqual(weeks.map((w) => w.complete), [true, true, false]);
-  assert.equal(leagueOpenWeek(weeks), 3);
+test('league weeks: first kickoff locks the week, processing the morning after the last game opens the next', async () => {
+  const { leagueWeeks, leagueOpenWeek } = await import('./league.js');
+  const at = (iso) => Date.parse(iso);
+  const schedule = [
+    { week: 9, home: 'A', away: 'B', kickoff: at('2026-11-06T01:15Z') },
+    { week: 10, home: 'NYG', away: 'WAS', kickoff: at('2026-11-13T01:15Z') },
+    { week: 10, home: 'DET', away: 'NE', kickoff: at('2026-11-15T18:00Z') },
+    { week: 10, home: 'BAL', away: 'LAC', kickoff: at('2026-11-17T01:15Z') },
+    { week: 11, home: 'A', away: 'B', kickoff: at('2026-11-20T01:15Z') },
+  ];
+  let weeks = leagueWeeks(schedule, 10, at('2026-11-10T12:00Z'));
+  assert.deepEqual(weeks.slice(8).map((w) => [w.locked, w.complete]), [[true, true], [false, false], [false, false]]);
+  assert.equal(weeks[8].preLeague, true); // before the league began
+  assert.equal(leagueOpenWeek(weeks), 10);
+  assert.equal(new Date(weeks[9].deadline).toISOString(), '2026-11-13T01:15:00.000Z');
+  assert.equal(new Date(weeks[9].processAt).toISOString(), '2026-11-17T09:15:00.000Z');
+  weeks = leagueWeeks(schedule, 10, at('2026-11-16T12:00Z'));
+  assert.deepEqual([weeks[9].locked, weeks[9].complete, leagueOpenWeek(weeks)], [true, false, 10]);
+  weeks = leagueWeeks(schedule, 10, at('2026-11-17T09:15Z'));
+  assert.deepEqual([weeks[9].complete, leagueOpenWeek(weeks)], [true, 11]);
 });
 
-test('league clock: offline for the update window after each deadline', async () => {
-  const { leagueWeeks, leagueOpenWeek, leagueUpdating, ukTime } = await import('./league.js');
-  const at = (time) => leagueWeeks({ startDate: '2026-11-10', deadlineTime: '22:00', weeks: 3, updateMinutes: 60 }, ukTime('2026-11-11', time));
-  // 21:59 on day 2: week 1 is done, week 2 still open.
-  let weeks = at('21:59');
-  assert.deepEqual([leagueOpenWeek(weeks), leagueUpdating(weeks)?.week ?? null], [2, null]);
-  // 22:30: week 2 locked and being processed; its results aren't out yet.
-  weeks = at('22:30');
-  assert.equal(leagueUpdating(weeks).week, 2);
-  assert.equal(weeks[1].complete, false);
-  assert.equal(new Date(leagueUpdating(weeks).reopens).toISOString(), '2026-11-11T23:00:00.000Z');
-  // 23:00: results out, week 3 open.
-  weeks = at('23:00');
-  assert.deepEqual([leagueOpenWeek(weeks), leagueUpdating(weeks), weeks[1].complete], [3, null, true]);
+test('weekLocks: teams lock at their scheduled kickoff', async () => {
+  const { weekLocks, kickoffOf } = await import('./league.js');
+  const schedule = [
+    { week: 10, home: 'NYG', away: 'WAS', kickoff: 100 },
+    { week: 10, home: 'DET', away: 'NE', kickoff: 200 },
+    { week: 11, home: 'KC', away: 'DEN', kickoff: 50 },
+  ];
+  const before = weekLocks(schedule, 10, 99);
+  assert.deepEqual([[...before.teams], before.chips, before.next], [[], false, 100]);
+  const thursday = weekLocks(schedule, 10, 100);
+  assert.deepEqual([[...thursday.teams].sort(), thursday.chips, thursday.next], [['NYG', 'WAS'], true, 200]);
+  assert.equal(weekLocks(schedule, 10, 500).next, null);
+  assert.deepEqual([kickoffOf(schedule, 10, 'NE'), kickoffOf(schedule, 10, 'KC')], [200, null]);
+});
+
+test('rolling locks: locked players cannot be sold, bought or given an armband', async () => {
+  const { applyChanges, cannotAdd, cannotPlayChip, isLocked } = await import('./squad.js');
+  let { team, players } = fullSquad();
+  team = rollover(team, 10);
+  const byId = new Map(players.map((p) => [p.id, p]));
+  const ids = squadIds(team);
+  const captain = team.captain;
+  const capTeam = team.info[captain].team;
+  const locks = { teams: new Set([capTeam]), chips: true };
+  assert.equal(isLocked(team, captain, locks, byId), true);
+
+  // Selling a locked player.
+  const fresh = mk(team.info[captain].pos, 45, 'ZZZ');
+  byId.set(fresh.id, fresh);
+  assert.throws(() => applyChanges(team, { squad: [...ids.filter((id) => id !== captain), fresh.id] }, byId, { locks }), /locked/);
+  // Buying a locked player.
+  const lockedBuy = mk('WR', 45, capTeam);
+  byId.set(lockedBuy.id, lockedBuy);
+  assert.match(cannotAdd(team, lockedBuy, locks), /Locked/);
+  // Chips close at the first kickoff.
+  assert.match(cannotPlayChip(team, 'paydirt', locks), /first kickoff/);
+  assert.throws(() => applyChanges(team, { squad: ids, chip: 'paydirt' }, byId, { locks }), /first kickoff/);
+
+  // The armband can move off a locked captain to an unlocked player...
+  const other = ids.find((id) => id !== captain && id !== team.vice && team.info[id].pos !== 'QB' && team.info[id].team !== capTeam);
+  const moved = applyChanges(team, { squad: ids, captain: other }, byId, { locks });
+  assert.equal(moved.captain, other);
+  // ...but never onto a locked one, even by swapping captain and vice.
+  assert.throws(() => applyChanges(moved, { squad: ids, captain }, byId, { locks }), /locked/);
+  const swapped = applyChanges(team, { squad: ids, captain: team.vice }, byId, { locks });
+  assert.equal(swapped.captain, team.vice);
+  assert.equal(swapped.vice, null); // the locked old captain doesn't become vice
+  // Without locks (solo play) nothing changes.
+  assert.equal(applyChanges(team, { squad: ids, captain: team.vice }, byId).vice, captain);
+});
+
+test('parseGames: kickoff times, status, and scores only once final', async () => {
+  const { parseGames } = await import('./results.js');
+  const game = (state, completed, date) => ({
+    date,
+    competitions: [{ date, status: { type: { state, completed } }, competitors: [
+      { homeAway: 'home', team: { abbreviation: 'NYG' }, score: '17' },
+      { homeAway: 'away', team: { abbreviation: 'WSH' }, score: '14' },
+    ] }],
+  });
+  const games = parseGames({ events: [game('pre', false, '2026-11-13T01:15Z'), game('in', false, '2026-11-15T18:00Z'), game('post', true, '2026-11-16T01:20Z')] }, 10);
+  assert.deepEqual(games.map((g) => g.status), ['pre_game', 'in_game', 'complete']);
+  assert.equal(games[0].kickoff, Date.parse('2026-11-13T01:15Z'));
+  assert.equal(games[0].away, 'WAS');
+  assert.deepEqual([games[1].homeScore, games[2].homeScore, games[2].week], [undefined, 17, 10]);
 });
 
 test('applyChanges: sells then buys, keeps buy price on a buy-back, and refuses half transfers', async () => {
@@ -365,16 +428,6 @@ test('final scores: ESPN scoreboard to W/L lines, with team codes translated', a
   assert.equal(fixtureResult(pit[0]), 'W 23–20');
   assert.equal(fixtureResult(teamFixtures(schedule, 'CIN')[0]), 'L 20–23');
   assert.equal(fixtureResult(pit[1]), ''); // not played yet
-});
-
-test('league schedule hides scores until that week\'s results are out', async () => {
-  const { leagueSchedule } = await import('../../server/game.mjs');
-  const schedule = [{ week: 1, home: 'A', away: 'B', homeScore: 10, awayScore: 7 }, { week: 2, home: 'B', away: 'A', homeScore: 3, awayScore: 21 }];
-  const c = { weeks: [{ week: 1, complete: true }, { week: 2, complete: false }] };
-  const seen = leagueSchedule(schedule, c);
-  assert.equal(seen[0].homeScore, 10);
-  assert.equal(seen[1].homeScore, undefined);
-  assert.equal(seen[1].awayScore, undefined);
 });
 
 test('chips: once a season, one a week, not in the building week for Free Hit', async () => {

@@ -5,7 +5,7 @@ import { byeWeek, useFixtures } from './season.js';
 import { injuryShort, playerFor, priceText } from './lookup.js';
 import { POSITIONS, RULES, SLOT_ELIGIBLE, fmtPrice, fmtPts } from '../core/rules.js';
 import {
-  activeChip, cannotAdd, countBy, freeTransfersLeft, isFreePosition, minCostToFill, pendingHits,
+  activeChip, cannotAdd, countBy, freeTransfersLeft, isFreePosition, isLocked, minCostToFill, pendingHits,
   sellValue, squadIds, transfersMade, transfersUnlimited,
 } from '../core/squad.js';
 
@@ -18,7 +18,8 @@ const SORTS = {
 };
 const LIMIT = 150;
 
-export default function MarketView({ team, actions: teamActions, market, playersById, filter, setFilter }) {
+/** `locks` (online league): players whose game has kicked off can't be bought or sold. */
+export default function MarketView({ team, actions: teamActions, market, playersById, filter, setFilter, locks }) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('price');
   const [affordable, setAffordable] = useState(false);
@@ -42,12 +43,15 @@ export default function MarketView({ team, actions: teamActions, market, players
 
   const sheetPlayer = sheetId ? playerFor(sheetId, team, playersById) : null;
   const sheetOwned = sheetId && owned.has(sheetId);
-  const sheetBlock = sheetPlayer && !sheetOwned ? cannotAdd(team, sheetPlayer) : null;
+  const sheetBlock = sheetPlayer && !sheetOwned ? cannotAdd(team, sheetPlayer, locks) : null;
+  const locked = (id) => isLocked(team, id, locks, playersById);
   const actions = !sheetPlayer
     ? []
-    : sheetOwned
-      ? [{ label: isFreePosition(sheetPlayer.pos) ? 'Remove' : `Sell (${fmtPrice(sellValue(team, sheetId, sheetPlayer.price))})`, danger: true, onClick: () => { sell(sheetPlayer); setSheetId(null); } }]
-      : [{ label: sheetBlock ?? `Buy (${priceText(sheetPlayer.price, sheetPlayer.pos)})`, primary: true, disabled: Boolean(sheetBlock), onClick: () => { buy(sheetPlayer); setSheetId(null); } }];
+    : sheetOwned && locked(sheetId)
+      ? [{ label: 'Locked: his game has kicked off', disabled: true }]
+      : sheetOwned
+        ? [{ label: isFreePosition(sheetPlayer.pos) ? 'Remove' : `Sell (${fmtPrice(sellValue(team, sheetId, sheetPlayer.price))})`, danger: true, onClick: () => { sell(sheetPlayer); setSheetId(null); } }]
+        : [{ label: sheetBlock ?? `Buy (${priceText(sheetPlayer.price, sheetPlayer.pos)})`, primary: true, disabled: Boolean(sheetBlock), onClick: () => { buy(sheetPlayer); setSheetId(null); } }];
 
   const made = transfersMade(team);
   const hits = pendingHits(team);
@@ -99,7 +103,7 @@ export default function MarketView({ team, actions: teamActions, market, players
       <ul className="market">
         {list.slice(0, LIMIT).map((p) => {
           const mine = owned.has(p.id);
-          const block = mine ? null : cannotAdd(team, p);
+          const block = mine ? (locked(p.id) ? 'Locked: his game has kicked off' : null) : cannotAdd(team, p, locks);
           return (
             <li key={p.id} className={mine ? 'mine' : ''}>
               <button className="market-player" onClick={() => setSheetId(p.id)}>
@@ -117,7 +121,7 @@ export default function MarketView({ team, actions: teamActions, market, players
               <span className="num">{p.opponent === 'BYE' ? '-' : fmtPts(p.weekProj)}</span>
               <span className="num price">{priceText(p.price, p.pos)}</span>
               {mine ? (
-                <button className="mini danger" onClick={() => sell(p)} title={`Sell for ${fmtPrice(sellValue(team, p.id, p.price))}`}>−</button>
+                <button className="mini danger" disabled={Boolean(block)} onClick={() => sell(p)} title={block ?? `Sell for ${fmtPrice(sellValue(team, p.id, p.price))}`}>{block ? '🔒' : '−'}</button>
               ) : (
                 <button className="mini primary" disabled={Boolean(block)} onClick={() => buy(p)} title={block ?? 'Buy'}>+</button>
               )}

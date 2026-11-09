@@ -33,11 +33,14 @@ await backup(db, target);
 db.close();
 
 // Make the copy a single self-contained file (the live DB uses WAL, which adds side files),
-// then check it's intact and has the tables we expect.
+// then check it's intact.
 const copy = new DatabaseSync(target);
 copy.exec('PRAGMA journal_mode = DELETE');
 const integrity = copy.prepare('PRAGMA integrity_check').get().integrity_check;
-const counts = copy.prepare('SELECT (SELECT COUNT(*) FROM leagues) AS leagues, (SELECT COUNT(*) FROM managers) AS managers').get();
+// (A database from before accounts existed has no accounts table yet.)
+const hasTable = (name) => Boolean(copy.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name));
+const count = (table) => (hasTable(table) ? copy.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n : 0);
+const counts = { accounts: count('accounts'), teams: count('teams') };
 copy.close();
 if (integrity !== 'ok') {
   console.error(`Backup ${target} failed its integrity check: ${integrity}`);
@@ -51,4 +54,4 @@ const pruned = readdirSync(dir)
   .filter((f) => f !== target && statSync(f).mtimeMs < cutoff);
 for (const f of pruned) rmSync(f);
 
-console.log(`${new Date().toISOString()} backed up ${counts.leagues} league(s), ${counts.managers} manager(s) to ${target}${pruned.length ? `; removed ${pruned.length} older than ${keepDays} days` : ''}`);
+console.log(`${new Date().toISOString()} backed up ${counts.accounts} account(s), ${counts.teams} team(s) to ${target}${pruned.length ? `; removed ${pruned.length} older than ${keepDays} days` : ''}`);

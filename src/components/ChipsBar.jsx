@@ -5,9 +5,9 @@ import { activeChip, cannotPlayChip } from '../core/squad.js';
 /**
  * The season's chips, one button each. Playing one adds it to the pending changes, so it's
  * confirmed with them and can be cancelled until then. Once saved it's played for good.
- * `team` is the draft, `saved` the confirmed team.
+ * `team` is the draft, `saved` the confirmed team. `locks`: chips close at the first kickoff.
  */
-export default function ChipsBar({ team, saved, actions }) {
+export default function ChipsBar({ team, saved, actions, locks }) {
   const [openId, setOpenId] = useState(null);
   const active = activeChip(team);
   const savedActive = saved ? activeChip(saved) : active;
@@ -17,7 +17,7 @@ export default function ChipsBar({ team, saved, actions }) {
     if (id === active) return { cls: 'chip-pending', text: 'To confirm' };
     const used = team.chipsUsed?.[id];
     if (used != null) return { cls: 'chip-used', text: `Wk ${used}` };
-    return cannotPlayChip(team, id) ? { cls: 'chip-blocked', text: 'Available' } : { cls: '', text: 'Available' };
+    return cannotPlayChip(team, id, locks) ? { cls: 'chip-blocked', text: 'Available' } : { cls: '', text: 'Available' };
   };
 
   const chip = CHIPS.find((c) => c.id === openId);
@@ -25,7 +25,7 @@ export default function ChipsBar({ team, saved, actions }) {
   let detail = null;
   if (chip) {
     const used = team.chipsUsed?.[chip.id];
-    const reason = cannotPlayChip(team, chip.id);
+    const reason = cannotPlayChip(team, chip.id, locks);
     if (chip.id === savedActive) {
       detail = <p className="ok">Playing this week. Chips can't be undone once confirmed.</p>;
     } else if (chip.id === active) {

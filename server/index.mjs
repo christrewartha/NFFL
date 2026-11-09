@@ -5,15 +5,17 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checkPin, openStore } from './store.mjs';
-import { clock, currentTeam, leagueSchedule, results, seasonSchedule, seasonWeeks } from './game.mjs';
+import { checkSecret, openStore } from './store.mjs';
+import { createGame } from './game.mjs';
 import { applyChanges } from '../src/core/squad.js';
+import { weekLocks } from '../src/core/league.js';
 import { fetchWeekResults } from '../src/core/results.js';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const DIST = join(ROOT, 'dist');
 const store = openStore(process.env.DB_PATH ?? join(ROOT, 'server', 'nffl.db'));
+const game = createGame(store);
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 
@@ -45,7 +47,7 @@ function send(res, status, data) {
 
 const nflResults = new Map();
 
-// A few join attempts per IP per 10 minutes, so PINs can't be brute-forced.
+// A few sign-in attempts per IP per 10 minutes, so passwords can't be brute-forced.
 const attempts = new Map();
 function rateLimit(ip) {
   const now = Date.now();
@@ -56,78 +58,91 @@ function rateLimit(ip) {
 
 function auth(req) {
   const token = req.headers.authorization?.replace(/^Bearer /, '');
-  const id = token && store.session(token);
-  const manager = id && store.manager(id);
-  if (!manager) throw new HttpError(401, 'Please sign in again');
-  return { manager, league: store.league(manager.league_code), token };
+  const id = token && store.login(token);
+  const account = id && store.account(id);
+  if (!account) throw new HttpError(401, 'Please sign in again');
+  return { account, token };
 }
 
-/** Load the league's season and clock, and bring the manager's team up to date. */
-async function context(manager, league) {
-  const season = await seasonWeeks(league.season);
-  const c = clock(league, season.length);
-  const team = currentTeam(manager, league, c);
-  if (JSON.stringify(team) !== JSON.stringify(manager.team)) store.saveTeam(manager.id, team);
-  return { season, c, team };
+/** The signed-in account, its team brought up to date, and the season's clock. */
+function context(req) {
+  const { account, token } = auth(req);
+  if (!game.isReady()) throw new HttpError(503, 'The league is starting up. Try again in a minute.');
+  const c = game.clock();
+  return { account, token, c, team: game.teamOf(account.id, c) };
+}
+
+function credentials({ name, password }) {
+  if (typeof name !== 'string' || !name.trim() || name.trim().length > 24) throw new HttpError(400, 'Pick a name (up to 24 characters)');
+  if (typeof password !== 'string' || password.length < 6 || password.length > 100) throw new HttpError(400, 'Passwords need at least 6 characters');
+  return { name: name.trim(), password };
+}
+
+function leagueName(name) {
+  if (typeof name !== 'string' || !name.trim() || name.trim().length > 30) throw new HttpError(400, 'Give the league a name (up to 30 characters)');
+  return name.trim();
+}
+
+const myLeagues = (account) => store.minileaguesOf(account.id, game.season)
+  .map((l) => ({ id: l.id, code: l.code, name: l.name, size: l.size, isOwner: l.owner_id === account.id }));
+
+/**
+ * A team's scored week for the table. With `locks` (a rival's live week), players whose
+ * game hasn't kicked off are hidden, armband and all: picks are revealed as games lock.
+ * Once the last game has kicked off, everything shows (players on a bye never lock).
+ */
+function shownWeek(result, team, locks) {
+  const hidden = (id) => locks?.next != null && id && !locks.teams.has(team.info[id]?.team);
+  return {
+    week: result.week,
+    rows: result.rows.map((r) => (hidden(r.id)
+      ? { slot: r.slot, id: null, name: null, hidden: true, pts: 0, mult: 1, bonus: 0 }
+      : { ...r, name: team.info[r.id]?.name ?? null, pos: team.info[r.id]?.pos ?? null })),
+    hits: result.hits,
+    chip: result.chip,
+    chipPts: result.chipPts,
+  };
 }
 
 // --- API -----------------------------------------------------------------------
 const routes = {
-  'POST /api/join': async (req) => {
+  'POST /api/signup': async (req) => {
     rateLimit(req.socket.remoteAddress);
-    const { code, name, pin } = await body(req);
-    const league = typeof code === 'string' && store.league(code.trim().toUpperCase());
-    if (!league) throw new HttpError(404, 'No league with that code');
-    if (typeof name !== 'string' || !name.trim() || name.trim().length > 24) throw new HttpError(400, 'Pick a name (up to 24 characters)');
-    if (!/^\d{4,8}$/.test(String(pin))) throw new HttpError(400, 'PIN must be 4 to 8 digits');
-    const existing = store.managerByName(league.code, name);
-    if (existing && !checkPin(pin, existing.pin_hash)) throw new HttpError(401, 'That name is taken and the PIN does not match');
-    const id = existing?.id ?? store.addManager(league.code, name, pin);
-    return { token: store.newSession(id) };
+    const { name, password } = credentials(await body(req));
+    if (store.accountByName(name)) throw new HttpError(409, 'That name is taken. Sign in instead, or pick another.');
+    return { token: store.newLogin(store.addAccount(name, password)) };
+  },
+
+  'POST /api/login': async (req) => {
+    rateLimit(req.socket.remoteAddress);
+    const { name, password } = await body(req);
+    const account = typeof name === 'string' && store.accountByName(name);
+    if (!account || typeof password !== 'string' || !checkSecret(password, account.password_hash)) throw new HttpError(401, "That name and password don't match");
+    return { token: store.newLogin(account.id) };
   },
 
   'POST /api/logout': async (req) => {
-    store.dropSession(auth(req).token);
+    store.dropLogin(auth(req).token);
     return { ok: true };
   },
 
   'GET /api/state': async (req) => {
-    const { manager, league } = auth(req);
-    const { season, c, team } = await context(manager, league);
-    const about = {
-      league: { code: league.code, name: league.name, season: league.season },
-      me: { id: manager.id, name: manager.name },
-    };
-    // While a week is being processed the league is offline: just say when it's back.
-    if (c.updating) return { ...about, updating: { week: c.updating.week, deadline: c.updating.deadline, reopens: c.updating.reopens } };
+    const { account, c, team } = context(req);
     return {
-      ...about,
+      game: { season: game.season, startWeek: game.startWeek },
+      me: { id: account.id, name: account.name },
+      leagues: myLeagues(account),
       weeks: c.weeks,
       week: c.open,
-      market: { season: league.season, week: c.open, players: c.open ? season[c.open - 1].market : [] },
-      schedule: leagueSchedule(await seasonSchedule(league.season), c),
+      market: { season: game.season, week: c.open, players: c.open ? game.market(c.open).players : [] },
+      schedule: game.schedule(),
       team,
     };
   },
 
-  // One player's results, for weeks whose deadline has passed only.
-  'GET /api/log': async (req, url) => {
-    const { manager, league } = auth(req);
-    const { season, c } = await context(manager, league);
-    const id = url.searchParams.get('id');
-    return c.weeks
-      .filter((w) => w.complete)
-      .flatMap(({ week }) => {
-        const s = season[week - 1].scores[id];
-        return s ? [{ week, pts: s.pts, played: s.played, stats: season[week - 1].box[id] ?? null }] : [];
-      });
-  },
-
   // Save a batch of changes the manager has reviewed and confirmed. All or nothing.
   'POST /api/commit': async (req) => {
-    const { manager, league } = auth(req);
-    const { season, c, team } = await context(manager, league);
-    if (c.updating) throw new HttpError(409, `The Week ${c.updating.week} deadline has passed and it's being processed. Your changes weren't saved.`);
+    const { account, c, team } = context(req);
     if (!c.open) throw new HttpError(409, 'The season is over');
     const { squad, captain = null, vice = null, chip = null } = await body(req);
     const ids = Array.isArray(squad) ? squad.filter((id) => typeof id === 'string') : null;
@@ -136,12 +151,20 @@ const routes = {
     if (chip != null && typeof chip !== 'string') throw new HttpError(400, 'Bad chip');
     let next;
     try {
-      next = applyChanges(team, { squad: ids, captain, vice, chip }, season[c.open - 1].byId);
+      next = applyChanges(team, { squad: ids, captain, vice, chip }, game.market(c.open).byId, { locks: weekLocks(game.schedule(), c.open) });
     } catch (e) {
       throw new HttpError(400, e.message);
     }
-    store.saveTeam(manager.id, next);
+    store.saveTeam(account.id, game.season, next);
     return { team: next };
+  },
+
+  // Player scores for a week that has kicked off: live until it's processed, then final.
+  'GET /api/scores': async (req, url) => {
+    const { c } = context(req);
+    const week = Number(url.searchParams.get('week'));
+    if (!c.weeks[week - 1]?.locked || week < game.startWeek) throw new HttpError(403, "That week hasn't kicked off yet");
+    return game.scores(week)?.scores ?? {};
   },
 
   // Real NFL final scores for solo play's game log. ESPN refuses browser requests from
@@ -160,39 +183,59 @@ const routes = {
     return results;
   },
 
-  'GET /api/scores': async (req, url) => {
-    const { manager, league } = auth(req);
-    const { season, c } = await context(manager, league);
-    const week = Number(url.searchParams.get('week'));
-    if (!c.weeks[week - 1]?.complete) throw new HttpError(403, "That week's results aren't out yet");
-    return season[week - 1].scores;
+  // A table: the overall one (every team) or one of your mini-leagues (?league=id).
+  // Totals include the week in play, provisionally.
+  'GET /api/standings': async (req, url) => {
+    const { account, c } = context(req);
+    const leagueId = url.searchParams.get('league');
+    const league = leagueId ? store.minileague(Number(leagueId)) : null;
+    if (leagueId && (!league || !store.isMember(league.id, account.id))) throw new HttpError(404, "You're not in that league");
+    const members = league && store.members(league.id);
+    const locks = c.open ? weekLocks(game.schedule(), c.open) : null;
+    const standings = store.teams(game.season)
+      .filter((t) => !members || members.has(t.accountId))
+      .map((t) => {
+        const team = game.teamOf(t.accountId, c, t.team);
+        const weekly = game.results(team, c);
+        const live = game.liveResult(team, c);
+        const isMe = t.accountId === account.id;
+        const shown = live ?? weekly.at(-1);
+        return {
+          id: t.accountId,
+          name: t.name,
+          isMe,
+          weekly: weekly.map((r) => ({ week: r.week, total: r.total })),
+          live: live && { week: live.week, total: live.total },
+          total: weekly.reduce((s, r) => s + r.total, 0) + (live?.total ?? 0),
+          latest: shown && shownWeek(shown, team, live && !isMe ? locks : null),
+        };
+      })
+      .sort((a, b) => b.total - a.total);
+    return { league: league && { id: league.id, code: league.code, name: league.name }, standings };
   },
 
-  'GET /api/league': async (req) => {
-    const { manager: me, league } = auth(req);
-    const season = await seasonWeeks(league.season);
-    const standings = [];
-    for (const m of store.managers(league.code)) {
-      const { team, c } = await context(m, league);
-      const weekly = results(team, season, c);
-      const latest = weekly.at(-1);
-      standings.push({
-        id: m.id,
-        name: m.name,
-        isMe: m.id === me.id,
-        weekly: weekly.map((r) => ({ week: r.week, total: r.total })),
-        total: weekly.reduce((s, r) => s + r.total, 0),
-        // Rivals' teams are only shown for locked weeks, as in FPL.
-        latest: latest && {
-          week: latest.week,
-          rows: latest.rows.map((r) => ({ ...r, name: team.info[r.id]?.name ?? null, pos: team.info[r.id]?.pos ?? null })),
-          hits: latest.hits,
-          chip: latest.chip,
-          chipPts: latest.chipPts,
-        },
-      });
-    }
-    return { standings: standings.sort((a, b) => b.total - a.total) };
+  'POST /api/leagues': async (req) => {
+    const { account } = context(req);
+    const name = leagueName((await body(req)).name);
+    if (store.minileaguesOf(account.id, game.season).length >= 20) throw new HttpError(400, "That's the most leagues you can be in");
+    const league = store.addMinileague(name, game.season, account.id);
+    return { league: { id: league.id, code: league.code, name: league.name }, leagues: myLeagues(account) };
+  },
+
+  'POST /api/leagues/join': async (req) => {
+    rateLimit(req.socket.remoteAddress);
+    const { account } = context(req);
+    const { code } = await body(req);
+    const league = typeof code === 'string' && store.minileagueByCode(code.trim().toUpperCase());
+    if (!league || league.season !== game.season) throw new HttpError(404, 'No league with that code');
+    store.join(league.id, account.id);
+    return { league: { id: league.id, code: league.code, name: league.name }, leagues: myLeagues(account) };
+  },
+
+  'POST /api/leagues/leave': async (req) => {
+    const { account } = context(req);
+    store.leave(Number((await body(req)).id), account.id);
+    return { leagues: myLeagues(account) };
   },
 };
 
@@ -213,28 +256,10 @@ async function serveStatic(res, pathname) {
   }
 }
 
-// --- Deadlines -------------------------------------------------------------------
-// When a deadline passes, lock every team for that week straight away (rather than as
-// each manager next opens the app), while the league is offline for its update window.
-const processed = new Set();
-async function processDeadlines() {
-  for (const league of store.leagues()) {
-    try {
-      const season = await seasonWeeks(league.season);
-      const { updating } = clock(league, season.length);
-      const key = `${league.code}:${updating?.week}`;
-      if (!updating || processed.has(key)) continue;
-      const managers = store.managers(league.code);
-      for (const m of managers) await context(m, league);
-      processed.add(key);
-      const back = new Date(updating.reopens).toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' });
-      console.log(`${new Date().toISOString()} ${league.name}: week ${updating.week} locked for ${managers.length} team(s), back at ${back}`);
-    } catch (e) {
-      console.error(`Processing deadline for ${league.code} failed:`, e);
-    }
-  }
-}
-setInterval(processDeadlines, 30 * 1000);
+// --- The season ------------------------------------------------------------------
+// Calendar, prices, live scores and each week's processing all happen in game.tick().
+game.tick();
+setInterval(game.tick, 30 * 1000);
 
 createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');

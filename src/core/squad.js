@@ -11,6 +11,10 @@
 //   weekStart: lineup, prices paid and bank at the start of this week (what a Free Hit returns to)
 //   chipsUsed: { [chip id]: week played }
 //   history: { [week]: locked snapshot }
+//
+// Online league locks: functions that take `locks` ({ teams: Set of NFL teams whose game
+// this week has kicked off, chips: true once the week's first game has }, from league.js
+// weekLocks) refuse anything touching a player whose game has started. Solo play passes none.
 
 import { CHIPS, RULES, chipName, fitsSlot } from './rules.js';
 import { sellPrice } from './pricing.js';
@@ -55,6 +59,9 @@ export function countBy(team, key) {
 
 export const isFreePosition = (pos) => RULES.freePositions.includes(pos);
 
+/** Has this squad player's game kicked off? His NFL team is the market's (byId), else as bought. */
+export const isLocked = (team, id, locks, byId) => Boolean(id && locks?.teams.has(byId?.get(id)?.team ?? team.info[id]?.team));
+
 // --- Chips ---------------------------------------------------------------------
 
 /** The chip played for the week being edited, or null. */
@@ -65,19 +72,20 @@ export const activeChip = (team) =>
 export const transfersUnlimited = (team) => isBuildingWeek(team) || activeChip(team) === 'freeHit';
 
 /** Can this chip be played this week? Returns null if so, otherwise the reason. */
-export function cannotPlayChip(team, id) {
+export function cannotPlayChip(team, id, locks) {
   if (!CHIPS.some((c) => c.id === id)) return 'Unknown chip';
   const used = team.chipsUsed?.[id];
   if (used === team.currentWeek) return 'Already played this week';
   if (used != null) return `Played in Week ${used}`;
   const active = activeChip(team);
   if (active) return `You're playing ${chipName(active)} this week (one chip per week)`;
+  if (locks?.chips) return "Chips must be played before the week's first kickoff";
   if (id === 'freeHit' && (isBuildingWeek(team) || !team.weekStart)) return 'Transfers are already free this week';
   return null;
 }
 
-export function playChip(team, id) {
-  const reason = cannotPlayChip(team, id);
+export function playChip(team, id, locks) {
+  const reason = cannotPlayChip(team, id, locks);
   if (reason) throw new Error(reason);
   return { ...team, chipsUsed: { ...team.chipsUsed, [id]: team.currentWeek } };
 }
@@ -107,9 +115,10 @@ export function sellValue(team, id, currentPrice) {
 }
 
 /** Can this player be bought right now? Returns null if so, otherwise the reason. */
-export function cannotAdd(team, player) {
+export function cannotAdd(team, player, locks) {
   const ids = squadIds(team);
   if (ids.includes(player.id)) return 'Already in your squad';
+  if (locks?.teams.has(player.team)) return 'Locked: his game has kicked off';
   if ((countBy(team, 'pos')[player.pos] ?? 0) >= RULES.squad[player.pos]) return `You have ${RULES.squad[player.pos]} ${player.pos}s`;
   if ((countBy(team, 'team')[player.team] ?? 0) >= RULES.maxPerTeam) return `Max ${RULES.maxPerTeam} from ${player.team}`;
   if (player.price > team.bank) return 'Not enough in the bank';
@@ -160,8 +169,8 @@ function place(team, id, pos) {
   return { starters, bench };
 }
 
-export function addPlayer(team, player) {
-  const reason = cannotAdd(team, player);
+export function addPlayer(team, player, locks) {
+  const reason = cannotAdd(team, player, locks);
   if (reason) throw new Error(reason);
   const withInfo = { ...team, info: { ...team.info, [player.id]: { name: player.name, pos: player.pos, team: player.team } } };
   const next = {
@@ -248,21 +257,33 @@ export function setRole(team, id, role) {
  * illegal, or (unless `partial`, for a draft mid-transfer) if it would leave a complete
  * squad incomplete. Used for both the draft preview and the server commit, so they agree.
  * A chip once played stays played: leaving it out of a later commit doesn't cancel it.
+ * With `locks`, players whose game has kicked off can't be sold, bought or given an
+ * armband, and chips can't be played after the first kickoff. An armband can move off a
+ * locked player (giving up his points), but never onto one, even by swapping.
  */
-export function applyChanges(team, { squad, captain = null, vice = null, chip = null }, byId, { partial = false } = {}) {
+export function applyChanges(team, { squad, captain = null, vice = null, chip = null }, byId, { partial = false, locks } = {}) {
   const want = new Set(squad);
-  let next = chip && chip !== activeChip(team) ? playChip(team, chip) : team;
-  for (const id of squadIds(team)) if (!want.has(id)) next = removePlayer(next, id, byId.get(id)?.price);
+  const locked = (t, id) => isLocked(t, id, locks, byId);
+  let next = chip && chip !== activeChip(team) ? playChip(team, chip, locks) : team;
+  for (const id of squadIds(team)) {
+    if (want.has(id)) continue;
+    if (locked(team, id)) throw new Error(`${team.info[id].name} is locked: his game has kicked off`);
+    next = removePlayer(next, id, byId.get(id)?.price);
+  }
   const have = new Set(squadIds(next));
   for (const id of squad) {
     if (have.has(id)) continue;
     const player = byId.get(id);
     if (!player) throw new Error('Player not found');
-    next = addPlayer(next, player);
+    next = addPlayer(next, player, locks);
   }
   if (!partial && isComplete(team) && !isComplete(next)) throw new Error('Finish your transfers: the squad needs 15 players');
-  if (captain && captain !== next.captain) next = setRole(next, captain, 'captain');
-  if (vice && vice !== next.vice) next = setRole(next, vice, 'vice');
+  for (const [role, id] of [['captain', captain], ['vice', vice]]) {
+    if (!id || id === next[role]) continue;
+    if (locked(next, id)) throw new Error(`${next.info[id]?.name ?? 'That player'} is locked: his game has kicked off`);
+    next = setRole(next, id, role);
+  }
+  for (const role of ['captain', 'vice']) if (next[role] !== team[role] && locked(next, next[role])) next = { ...next, [role]: null };
   return next;
 }
 
@@ -341,12 +362,8 @@ export function refundFreePositions(team) {
  */
 export function rollover(team, week) {
   if (week == null || week <= team.currentWeek) return team;
-  const chip = activeChip(team);
-  const freeHit = chip === 'freeHit' && team.weekStart;
-  const history = {
-    ...team.history,
-    [team.currentWeek]: { ...lineupOf(team), transfers: transfersMade(team), hits: pendingHits(team), ...(chip && { chip }) },
-  };
+  const freeHit = activeChip(team) === 'freeHit' && team.weekStart;
+  const history = { ...team.history, [team.currentWeek]: weekSnapshot(team) };
   const after = freeHit ? { ...team, ...team.weekStart } : team;
   for (let w = team.currentWeek + 1; w < week; w++) history[w] = { ...lineupOf(after), transfers: 0, hits: 0 };
   const carried = isBuildingWeek(team) ? 0 : freeHit ? team.ftAtWeekStart : freeTransfersLeft(team);
@@ -362,6 +379,12 @@ export function rollover(team, week) {
 }
 
 const lineupOf = (team) => ({ starters: [...team.starters], bench: [...team.bench], captain: team.captain, vice: team.vice });
+
+/** What the week being edited is scored on: lineup, armbands, transfer hits and chip. */
+export function weekSnapshot(team) {
+  const chip = activeChip(team);
+  return { ...lineupOf(team), transfers: transfersMade(team), hits: pendingHits(team), ...(chip && { chip }) };
+}
 
 /**
  * Score a locked week. scores: { [id]: { pts, played, td, won } } (td: rushing, receiving

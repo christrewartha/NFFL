@@ -8,27 +8,49 @@ const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scorebo
 const TEAM_ALIASES = { WSH: 'WAS' };
 const team = (code) => TEAM_ALIASES[code] ?? code;
 
+/**
+ * Every game in one ESPN scoreboard response: [{ week, home, away, kickoff, status,
+ * homeScore?, awayScore? }]. kickoff is epoch ms; status is 'pre_game', 'in_game' or
+ * 'complete' (Sleeper's words). Scores are only filled in once the game is final.
+ */
+export function parseGames(json, week) {
+  return (json?.events ?? []).flatMap((e) => {
+    const c = e.competitions?.[0];
+    if (!c) return [];
+    const side = (s) => c.competitors.find((x) => x.homeAway === s);
+    const done = Boolean(c.status?.type?.completed);
+    return [{
+      week,
+      home: team(side('home').team.abbreviation),
+      away: team(side('away').team.abbreviation),
+      kickoff: Date.parse(c.date ?? e.date),
+      status: done ? 'complete' : c.status?.type?.state === 'in' ? 'in_game' : 'pre_game',
+      ...(done && { homeScore: Number(side('home').score), awayScore: Number(side('away').score) }),
+    }];
+  });
+}
+
 /** Finished games from one ESPN scoreboard response: [{ home, away, homeScore, awayScore }]. */
 export function parseScoreboard(json) {
-  return (json?.events ?? [])
-    .map((e) => e.competitions?.[0])
-    .filter((c) => c?.status?.type?.completed)
-    .map((c) => {
-      const side = (s) => c.competitors.find((x) => x.homeAway === s);
-      return {
-        home: team(side('home').team.abbreviation),
-        away: team(side('away').team.abbreviation),
-        homeScore: Number(side('home').score),
-        awayScore: Number(side('away').score),
-      };
-    });
+  return parseGames(json)
+    .filter((g) => g.status === 'complete')
+    .map(({ home, away, homeScore, awayScore }) => ({ home, away, homeScore, awayScore }));
+}
+
+async function fetchScoreboard(season, week, fetchFn) {
+  const res = await fetchFn(`${ESPN}?dates=${season}&seasontype=2&week=${week}`);
+  if (!res.ok) throw new Error(`ESPN scoreboard week ${week} failed (${res.status})`);
+  return res.json();
 }
 
 /** From ESPN directly. Works from Node; browsers should use the league server's /api/nfl-results. */
 export async function fetchWeekResults(season, week, { fetchFn = globalThis.fetch.bind(globalThis) } = {}) {
-  const res = await fetchFn(`${ESPN}?dates=${season}&seasontype=2&week=${week}`);
-  if (!res.ok) throw new Error(`ESPN scoreboard week ${week} failed (${res.status})`);
-  return parseScoreboard(await res.json());
+  return parseScoreboard(await fetchScoreboard(season, week, fetchFn));
+}
+
+/** One week's games with kickoff times and status (see parseGames). Node only, as above. */
+export async function fetchWeekGames(season, week, { fetchFn = globalThis.fetch.bind(globalThis) } = {}) {
+  return parseGames(await fetchScoreboard(season, week, fetchFn), week);
 }
 
 /** The schedule with final scores filled in. results: [{ week, home, away, homeScore, awayScore }]. */

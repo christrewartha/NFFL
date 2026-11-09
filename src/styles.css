@@ -241,6 +241,15 @@ button.mini { width: 30px; height: 30px; border-radius: 50%; padding: 0; font-si
 .standings > tbody > tr > td { padding: 10px 8px; border-top: 1px solid var(--border); cursor: pointer; }
 .standings tr.me td { color: var(--accent); }
 .standings-detail > td { padding: 0 0 8px !important; cursor: default !important; }
+.move { display: inline-block; width: 16px; font-size: 11px; }
+.move.up { color: var(--accent); }
+.move.down { color: var(--danger); }
+.move.same { color: var(--muted); font-size: 8px; vertical-align: 2px; }
+.standings td.rank { white-space: nowrap; }
+.league-list td:first-child { width: 20px; }
+.table-head { display: flex; align-items: center; gap: 10px; margin: 4px 0 8px; }
+.table-head h3 { margin: 0; font-size: 16px; }
+.table-head button { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); }
 
 /* Rules */
 .rules ul { padding-left: 18px; line-height: 1.5; font-size: 14px; }

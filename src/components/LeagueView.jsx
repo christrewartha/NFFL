@@ -3,20 +3,13 @@ import { RULES, chipName, fmtPts } from '../core/rules.js';
 
 const LIVE_REFRESH = 2 * 60 * 1000;
 
-/**
- * Tables: the overall one (everyone) and each of the manager's mini-leagues, plus making
- * and joining mini-leagues. Tap a manager to see their week. While games are on, totals
- * include the live week and refresh every couple of minutes.
- */
-export default function LeagueView({ api, leagues, setLeagues, leagueId, setLeagueId, live }) {
+/** Load `path` from the API, again every couple of minutes while games are on. */
+function useLive(api, path, live) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [openId, setOpenId] = useState(null);
-  const league = leagues.find((l) => l.id === leagueId) ?? null;
-
   useEffect(() => {
     let current = true;
-    const load = () => api(`/api/standings${league ? `?league=${league.id}` : ''}`).then(
+    const load = () => api(path).then(
       (d) => current && (setData(d), setError(null)),
       (e) => current && setError(e.message),
     );
@@ -27,19 +20,72 @@ export default function LeagueView({ api, leagues, setLeagues, leagueId, setLeag
       current = false;
       clearInterval(timer);
     };
-  }, [api, league?.id, live]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [api, path, live]);
+  return { data, error };
+}
 
+/**
+ * The Leagues tab. First a list of the manager's leagues (the overall table and each
+ * mini-league) with their rank and an arrow for how it moved in the latest week; tap one
+ * for its full table. `leagueId`: null for the list, 'overall', or a mini-league's id.
+ * While games are on, the live week counts and everything refreshes every couple of minutes.
+ */
+export default function LeagueView({ api, leagues, setLeagues, leagueId, setLeagueId, live }) {
+  const league = leagues.find((l) => l.id === leagueId) ?? null;
+  if (leagueId === 'overall' || league) {
+    return <Table api={api} league={league} live={live} setLeagues={setLeagues} back={() => setLeagueId(null)} />;
+  }
+  return <LeagueList api={api} live={live} open={setLeagueId} setLeagues={setLeagues} />;
+}
+
+/** ▲ green if you've moved up, ▼ red if down, ● grey if the same; nothing before any points. */
+function Movement({ rank, prevRank }) {
+  if (rank == null || prevRank == null) return <span className="move" />;
+  if (rank < prevRank) return <span className="move up" title={`Up from ${prevRank}`}>▲</span>;
+  if (rank > prevRank) return <span className="move down" title={`Down from ${prevRank}`}>▼</span>;
+  return <span className="move same" title="No change">●</span>;
+}
+
+function LeagueList({ api, live, open, setLeagues }) {
+  const { data, error } = useLive(api, '/api/leagues/summary', live);
+  const rows = data && [{ id: 'overall', name: 'Overall', ...data.overall }, ...data.leagues];
+  return (
+    <div>
+      {error && <p className="error">{error}</p>}
+      {!rows ? (
+        !error && <p className="muted">Loading…</p>
+      ) : (
+        <table className="standings league-list">
+          <thead><tr><th /><th>League</th><th className="num">Rank</th></tr></thead>
+          <tbody>
+            {rows.map((l) => (
+              <tr key={l.id} onClick={() => open(l.id)}>
+                <td><Movement rank={l.rank} prevRank={l.prevRank} /></td>
+                <td>{l.name}</td>
+                <td className="num">{l.rank ? <><strong>{l.rank}</strong><span className="muted small"> of {l.size}</span></> : '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {rows?.some((l) => l.prevRank != null) && <p className="muted small">Arrows show how your rank moved in the latest week{live ? ' (live)' : ''}.</p>}
+      <ManageLeagues api={api} setLeagues={setLeagues} setLeagueId={open} />
+    </div>
+  );
+}
+
+function Table({ api, league, live, setLeagues, back }) {
+  const { data, error } = useLive(api, `/api/standings${league ? `?league=${league.id}` : ''}`, live);
+  const [openId, setOpenId] = useState(null);
   const standings = data?.standings;
   const liveWeek = standings?.find((m) => m.live)?.live.week;
   const lastWeek = (m) => (liveWeek ? m.live : m.weekly.at(-1));
 
   return (
     <div>
-      <div className="chips">
-        <button className={league ? '' : 'active'} onClick={() => setLeagueId(null)}>Overall</button>
-        {leagues.map((l) => (
-          <button key={l.id} className={league?.id === l.id ? 'active' : ''} onClick={() => setLeagueId(l.id)}>{l.name}</button>
-        ))}
+      <div className="table-head">
+        <button onClick={back}>‹ Leagues</button>
+        <h3>{league?.name ?? 'Overall'}</h3>
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -52,8 +98,8 @@ export default function LeagueView({ api, leagues, setLeagues, leagueId, setLeag
               <tr><th>#</th><th>Manager</th><th className="num">{liveWeek ? `Wk ${liveWeek} live` : 'Last wk'}</th><th className="num">Total</th></tr>
             </thead>
             <tbody>
-              {standings.map((m, i) => (
-                <Row key={m.id} m={m} rank={i + 1} last={lastWeek(m)} open={openId === m.id} toggle={() => setOpenId(openId === m.id ? null : m.id)} />
+              {standings.map((m) => (
+                <Row key={m.id} m={m} last={lastWeek(m)} open={openId === m.id} toggle={() => setOpenId(openId === m.id ? null : m.id)} />
               ))}
             </tbody>
           </table>
@@ -61,17 +107,16 @@ export default function LeagueView({ api, leagues, setLeagues, leagueId, setLeag
         </>
       )}
 
-      {league && <Invite league={league} api={api} setLeagues={setLeagues} onLeft={() => setLeagueId(null)} />}
-      <ManageLeagues api={api} setLeagues={setLeagues} setLeagueId={setLeagueId} />
+      {league && <Invite league={league} api={api} setLeagues={setLeagues} onLeft={back} />}
     </div>
   );
 }
 
-function Row({ m, rank, last, open, toggle }) {
+function Row({ m, last, open, toggle }) {
   return (
     <>
       <tr className={m.isMe ? 'me' : ''} onClick={toggle}>
-        <td>{rank}</td>
+        <td className="rank"><Movement rank={m.rank} prevRank={m.prevRank} />{m.rank}</td>
         <td>{m.name}</td>
         <td className="num">{last ? fmtPts(last.total) : '-'}</td>
         <td className="num"><strong>{fmtPts(m.total)}</strong></td>

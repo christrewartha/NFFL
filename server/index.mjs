@@ -104,6 +104,43 @@ function shownWeek(result, team, locks) {
   };
 }
 
+/**
+ * Every team's table row: weekly totals, the live week if one is in play, and `prevTotal`,
+ * the total before the latest week (the one in play, else the last processed), for movement.
+ */
+function allTeams(account, c) {
+  const locks = c.open ? weekLocks(game.schedule(), c.open) : null;
+  const inPlay = c.open && c.weeks[c.open - 1].locked ? c.open : null;
+  const latestWeek = inPlay ?? c.weeks.filter((w) => w.complete && !w.preLeague).at(-1)?.week ?? null;
+  return store.teams(game.season).map((t) => {
+    const team = game.teamOf(t.accountId, c, t.team);
+    const weekly = game.results(team, c);
+    const live = game.liveResult(team, c);
+    const isMe = t.accountId === account.id;
+    const shown = live ?? weekly.at(-1);
+    const total = weekly.reduce((s, r) => s + r.total, 0) + (live?.total ?? 0);
+    const latestPts = live?.week === latestWeek ? live.total : weekly.find((r) => r.week === latestWeek)?.total ?? 0;
+    return {
+      id: t.accountId,
+      name: t.name,
+      isMe,
+      weekly: weekly.map((r) => ({ week: r.week, total: r.total })),
+      live: live && { week: live.week, total: live.total },
+      total,
+      prevTotal: latestWeek ? total - latestPts : null,
+      latest: shown && shownWeek(shown, team, live && !isMe ? locks : null),
+    };
+  });
+}
+
+/** Rows sorted by total, with rank and prevRank (equal totals share a rank). */
+function ranked(rows) {
+  const rankBy = (key, row) => (row[key] == null ? null : 1 + rows.filter((r) => r[key] > row[key]).length);
+  return rows
+    .map((r) => ({ ...r, rank: rankBy('total', r), prevRank: rankBy('prevTotal', r) }))
+    .sort((a, b) => b.total - a.total);
+}
+
 // --- API -----------------------------------------------------------------------
 const routes = {
   'POST /api/signup': async (req) => {
@@ -191,27 +228,26 @@ const routes = {
     const league = leagueId ? store.minileague(Number(leagueId)) : null;
     if (leagueId && (!league || !store.isMember(league.id, account.id))) throw new HttpError(404, "You're not in that league");
     const members = league && store.members(league.id);
-    const locks = c.open ? weekLocks(game.schedule(), c.open) : null;
-    const standings = store.teams(game.season)
-      .filter((t) => !members || members.has(t.accountId))
-      .map((t) => {
-        const team = game.teamOf(t.accountId, c, t.team);
-        const weekly = game.results(team, c);
-        const live = game.liveResult(team, c);
-        const isMe = t.accountId === account.id;
-        const shown = live ?? weekly.at(-1);
-        return {
-          id: t.accountId,
-          name: t.name,
-          isMe,
-          weekly: weekly.map((r) => ({ week: r.week, total: r.total })),
-          live: live && { week: live.week, total: live.total },
-          total: weekly.reduce((s, r) => s + r.total, 0) + (live?.total ?? 0),
-          latest: shown && shownWeek(shown, team, live && !isMe ? locks : null),
-        };
-      })
-      .sort((a, b) => b.total - a.total);
+    const standings = ranked(allTeams(account, c).filter((t) => !members || members.has(t.id)));
     return { league: league && { id: league.id, code: league.code, name: league.name }, standings };
+  },
+
+  // Your rank in the overall table and each of your mini-leagues, and where you were
+  // before the latest week (the one in play, else the last one processed).
+  'GET /api/leagues/summary': async (req) => {
+    const { account, c } = context(req);
+    const all = allTeams(account, c);
+    const mine = (rows) => {
+      const me = ranked(rows).find((r) => r.isMe);
+      return { size: rows.length, rank: me?.rank ?? null, prevRank: me?.prevRank ?? null };
+    };
+    return {
+      overall: mine(all),
+      leagues: myLeagues(account).map((l) => {
+        const members = store.members(l.id);
+        return { id: l.id, name: l.name, ...mine(all.filter((t) => members.has(t.id))) };
+      }),
+    };
   },
 
   'POST /api/leagues': async (req) => {

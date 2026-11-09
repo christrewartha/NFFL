@@ -259,7 +259,8 @@ export function setRole(team, id, role) {
  * A chip once played stays played: leaving it out of a later commit doesn't cancel it.
  * With `locks`, players whose game has kicked off can't be sold, bought or given an
  * armband, and chips can't be played after the first kickoff. An armband can move off a
- * locked player (giving up his points), but never onto one, even by swapping.
+ * locked player (giving up his points), but never onto one, even by swapping, and
+ * changing captain after the vice's game has kicked off gives up the vice.
  */
 export function applyChanges(team, { squad, captain = null, vice = null, chip = null }, byId, { partial = false, locks } = {}) {
   const want = new Set(squad);
@@ -284,6 +285,9 @@ export function applyChanges(team, { squad, captain = null, vice = null, chip = 
     next = setRole(next, id, role);
   }
   for (const role of ['captain', 'vice']) if (next[role] !== team[role] && locked(next, next[role])) next = { ...next, [role]: null };
+  // Changing captain once the vice has kicked off gives up the vice. Otherwise you could hand
+  // the armband to a player you know won't play and let it fall back to a vice who has scored.
+  if (next.captain !== team.captain && locked(next, next.vice)) next = { ...next, vice: null };
   return next;
 }
 

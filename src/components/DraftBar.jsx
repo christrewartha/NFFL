@@ -71,9 +71,12 @@ export function DraftBar({ draftState }) {
               <div><dt>Points cost</dt><dd className={summary.hitsAdded ? 'error' : ''}>{summary.hitsAdded ? `−${summary.hitsAdded} (${RULES.hitCost} per extra transfer)` : 'None'}</dd></div>
               <div><dt>Bank</dt><dd>{fmtPrice(summary.bankBefore)} → {fmtPrice(summary.bankAfter)}</dd></div>
               {(summary.captain || summary.vice) && (
-                <div><dt>Armbands</dt><dd>{summary.captain && `C: ${name(draft.captain)}`}{summary.captain && summary.vice && ', '}{summary.vice && `V: ${name(draft.vice)}`}</dd></div>
+                <div><dt>Armbands</dt><dd>{summary.captain && `C: ${name(draft.captain)}`}{summary.captain && summary.vice && ', '}{summary.vice && `V: ${draft.vice ? name(draft.vice) : 'none'}`}</dd></div>
               )}
             </dl>
+            {base.vice && !draft.vice && summary.captain && (
+              <p className="chip-warning">You'll have no vice-captain. Changing captain after your vice has kicked off gives him up, and a player whose game has started can't take the armband. You can pick a new vice from players still to play.</p>
+            )}
             {summary.chip && <p className="chip-warning">Once confirmed, {chipName(summary.chip)} can't be undone. It's used for Week {draft.currentWeek} whatever happens.</p>}
             {summary.unfinished ? (
               <p className="error">Pick a replacement for everyone you've sold before confirming.</p>

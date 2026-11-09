@@ -28,7 +28,7 @@ export default function RulesView({ league = false, children }) {
         {league ? (
           <>
             <li><strong>Locks</strong> There's no single deadline. Each player locks when his game kicks off: from then he can't be sold, bought or given an armband. Until then you can keep changing the rest of your squad, right up to Monday night.</li>
-            <li><strong>Captain switching</strong> You can move the armband to any player whose game hasn't started. Moving it off a captain who has already played gives up his double points. Rivals' picks are revealed as each game kicks off.</li>
+            <li><strong>Captain switching</strong> You can move the armband to any player whose game hasn't started. Moving it off a captain who has already played gives up his double points. Changing captain once your vice-captain's game has kicked off gives up your vice too (otherwise you could pass the armband to someone you know won't play, so it falls back to a vice who has already scored). Rivals' picks are revealed as each game kicks off.</li>
             <li><strong>Points</strong> are live while games are on, and final when the week is processed, the morning after the last game. That's when the next week opens with new prices. Later stat corrections don't count.</li>
           </>
         ) : (

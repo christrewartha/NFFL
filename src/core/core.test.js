@@ -319,6 +319,14 @@ test('rolling locks: locked players cannot be sold, bought or given an armband',
   const swapped = applyChanges(team, { squad: ids, captain: team.vice }, byId, { locks });
   assert.equal(swapped.captain, team.vice);
   assert.equal(swapped.vice, null); // the locked old captain doesn't become vice
+  // Changing captain after the vice has kicked off gives up the vice (the inactive-captain
+  // trick: pass the armband to someone who won't play so it falls back to a vice who scored).
+  const viceLocks = { teams: new Set([team.info[team.vice].team]), chips: true };
+  const dropped = applyChanges(team, { squad: ids, captain: other }, byId, { locks: viceLocks });
+  assert.deepEqual([dropped.captain, dropped.vice], [other, null]);
+  // An unchanged captain keeps the locked vice, and a vice still to play survives a switch.
+  assert.equal(applyChanges(team, { squad: ids }, byId, { locks: viceLocks }).vice, team.vice);
+  assert.equal(moved.vice, team.vice);
   // Without locks (solo play) nothing changes.
   assert.equal(applyChanges(team, { squad: ids, captain: team.vice }, byId).vice, captain);
 });

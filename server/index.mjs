@@ -204,6 +204,20 @@ const routes = {
     return game.scores(week)?.scores ?? {};
   },
 
+  // The open week once it has kicked off: player scores so far, each game's state, and
+  // when the scores were last fetched. The Team screen polls this during games.
+  'GET /api/live': async (req) => {
+    const { c } = context(req);
+    if (!c.open || !c.weeks[c.open - 1].locked) return { week: c.open, scores: {}, games: [], updatedAt: null };
+    const stored = game.scores(c.open);
+    return {
+      week: c.open,
+      scores: stored?.scores ?? {},
+      updatedAt: stored?.updatedAt ?? null,
+      games: game.schedule().filter((g) => g.week === c.open).map(({ home, away, kickoff, status }) => ({ home, away, kickoff, status })),
+    };
+  },
+
   // Real NFL final scores for solo play's game log. ESPN refuses browser requests from
   // other sites, so fetch them here and cache them (finished games never change).
   'GET /api/nfl-results': async (req, url) => {

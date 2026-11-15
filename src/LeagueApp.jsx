@@ -99,6 +99,27 @@ export default function LeagueApp() {
     [state?.schedule, state?.week, minute], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
+  // Live scores for the Team screen while the week is in play (the server polls Sleeper
+  // every couple of minutes; checking it every minute keeps us close behind).
+  const inPlay = Boolean(locks?.chips && state?.week);
+  const [live, setLive] = useState(null);
+  useEffect(() => {
+    if (!inPlay) {
+      setLive(null);
+      return undefined;
+    }
+    let on = true;
+    const load = () => document.visibilityState === 'visible' && api('/api/live').then((l) => on && setLive(l), () => {});
+    load();
+    const timer = setInterval(load, 60 * 1000);
+    document.addEventListener('visibilitychange', load);
+    return () => {
+      on = false;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', load);
+    };
+  }, [inPlay, state?.week, api]);
+
   const getScores = useCallback((week) => api(`/api/scores?week=${week}`), [api]);
   const playersById = useMemo(() => new Map((state?.market?.players ?? []).map((p) => [p.id, p])), [state]);
   const season = useMemo(() => ({
@@ -156,7 +177,7 @@ export default function LeagueApp() {
   } else if (!state.week || tab === 'points') {
     body = <PointsView team={state.team} weeks={state.weeks} getScores={getScores} locks={locks} />;
   } else if (tab === 'team') {
-    body = <TeamView team={draft} saved={draftState.base} actions={actions} playersById={playersById} weeks={state.weeks} openMarket={openMarket} locks={locks} />;
+    body = <TeamView team={draft} saved={draftState.base} actions={actions} playersById={playersById} weeks={state.weeks} openMarket={openMarket} locks={locks} live={live?.week === state.week ? live : null} />;
   } else {
     body = <MarketView team={draft} actions={actions} market={state.market} playersById={playersById} filter={marketFilter} setFilter={setMarketFilter} locks={locks} />;
   }

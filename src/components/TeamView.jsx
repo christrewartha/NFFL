@@ -6,7 +6,7 @@ import ChipsBar from './ChipsBar.jsx';
 import { injuryShort, playerFor, shortName } from './lookup.js';
 import { RULES, fmtPrice, fmtPts } from '../core/rules.js';
 import {
-  activeChip, canCaptain, canSwap, freeTransfersLeft, isFreePosition, isComplete, isLocked, pendingHits, sellValue, squadIds, transfersUnlimited,
+  activeChip, canCaptain, canSwap, freeTransfersLeft, isFreePosition, isComplete, isLocked, pendingHits, scoreWeek, sellValue, squadIds, transfersUnlimited, weekSnapshot,
 } from '../core/squad.js';
 
 // One pitch row per position, in lineup order. K and DEF share a row, as do TE and FLEX.
@@ -39,8 +39,12 @@ function timeParts(at) {
   };
 }
 
-/** `locks` (online league): players whose game has kicked off this week; see squad.js. */
-export default function TeamView({ team, saved, actions: teamActions, playersById, weeks, openMarket, locks }) {
+/**
+ * `locks` (online league): players whose game has kicked off this week; see squad.js.
+ * `live` (once the week has kicked off): { scores, games, updatedAt } from /api/live. Players
+ * whose game has started show their points so far instead of a projection.
+ */
+export default function TeamView({ team, saved, actions: teamActions, playersById, weeks, openMarket, locks, live }) {
   const [sheetLoc, setSheetLoc] = useState(null);
   const [swapFrom, setSwapFrom] = useState(null);
   const [view, setView] = useState('pitch');
@@ -55,6 +59,12 @@ export default function TeamView({ team, saved, actions: teamActions, playersByI
   const hits = pendingHits(team);
   const deadline = deadlineParts(weeks, team.currentWeek);
   const locked = (id) => isLocked(team, id, locks, playersById);
+  // Live points (captain and chip bonuses included) for players whose game has started, plus
+  // the projection of everyone still to play.
+  const liveResult = locks?.chips ? scoreWeek(weekSnapshot(team), live?.scores ?? {}, team.info) : null;
+  const livePts = new Map(liveResult ? [...liveResult.rows, ...liveResult.benchRows].filter((r) => r.id).map((r) => [r.id, r.pts]) : []);
+  const toCome = team.starters.reduce((s, id) => s + (id && !locked(id) ? proj(id) * (id === team.captain ? captainMult : 1) : 0), 0);
+  const gameState = (p) => live?.games.find((g) => g.home === p.team || g.away === p.team)?.status;
   // Once the week has kicked off, the next lock is the next kickoff.
   const nextLock = locks?.chips ? { label: locks.next ? 'Next kickoff' : 'All games', ...(locks.next ? timeParts(locks.next) : { day: 'Kicked off', time: '' }) } : null;
 
@@ -89,9 +99,15 @@ export default function TeamView({ team, saved, actions: teamActions, playersByI
               {locked(id) && <span className="lock-badge" title="His game has kicked off">🔒</span>}
             </span>
             <span className="spot-name">{shortName(p)}</span>
-            <span className="spot-meta">
-              {p.opponent === 'BYE' ? 'BYE' : `${p.opponent ? `v ${p.opponent} · ` : ''}${fmtPts(p.weekProj)}`}
-            </span>
+            {locked(id) && liveResult ? (
+              <span className={`spot-meta spot-live${gameState(p) === 'in_game' ? ' playing' : ''}`} title={gameState(p) === 'complete' ? 'Final' : 'Live: points so far'}>
+                {p.opponent ? `v ${p.opponent} · ` : ''}<strong>{live ? fmtPts(livePts.get(id) ?? 0) : '…'}</strong>
+              </span>
+            ) : (
+              <span className="spot-meta">
+                {p.opponent === 'BYE' ? 'BYE' : `${p.opponent ? `v ${p.opponent} · ` : ''}${fmtPts(p.weekProj)}`}
+              </span>
+            )}
           </>
         ) : (
           <span className="spot-add">+</span>
@@ -128,14 +144,22 @@ export default function TeamView({ team, saved, actions: teamActions, playersByI
         ) : (
           <div><span className="muted">Week {team.currentWeek} {locks ? 'first kickoff' : 'deadline'}</span><strong>{deadline.day}</strong><span className="muted small">{deadline.time}</span></div>
         )}
-        <div><span className="muted">Projected</span><strong>{fmtPts(projected - hits)}</strong>{hits > 0 && <span className="error small">incl. −{hits} hit</span>}</div>
+        {liveResult ? (
+          <div>
+            <span className="muted">Live</span>
+            <strong className="ok">{live ? fmtPts(liveResult.total) : '…'}</strong>
+            <span className="muted small">{live ? `proj ${fmtPts(liveResult.total + toCome)}` : ''}</span>
+          </div>
+        ) : (
+          <div><span className="muted">Projected</span><strong>{fmtPts(projected - hits)}</strong>{hits > 0 && <span className="error small">incl. −{hits} hit</span>}</div>
+        )}
         <div><span className="muted">Bank</span><strong>{fmtPrice(team.bank)}</strong></div>
         <div><span className="muted">Free transfers</span><strong>{transfersUnlimited(team) ? '∞' : ft}</strong></div>
       </div>
 
       <ChipsBar team={team} saved={saved} actions={teamActions} locks={locks} />
       {locks?.chips && (
-        <div className="notice small">Week {team.currentWeek} has kicked off. 🔒 players are locked; everyone else can still be sold, bought or given the armband until their game starts.</div>
+        <div className="notice small">Week {team.currentWeek} has kicked off. 🔒 players are locked and show their points so far; everyone else can still be sold, bought or given the armband until their game starts.{live?.updatedAt && ` Scores updated ${new Date(live.updatedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}.`}</div>
       )}
       {chip === 'freeHit' && (
         <div className="notice">Free Hit: transfers are free this week. After the deadline your squad goes back to how it was at the start of Week {team.currentWeek}.</div>

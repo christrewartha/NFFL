@@ -95,7 +95,14 @@ button.danger { border-color: var(--danger); color: var(--danger); background: t
 .spot-selected { outline: 2px solid var(--gold); }
 .spot-target { outline: 2px solid var(--accent); }
 .spot-dim { opacity: 0.35; }
-.spot-locked { opacity: 0.6; }
+.spot-locked .spot-avatar, .spot-locked .spot-name { opacity: 0.6; }
+.spot-live { color: var(--text); }
+.spot-live strong { color: var(--accent); font-size: 11px; }
+.spot-live.playing strong::before {
+  content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 3px; vertical-align: 1px;
+  background: var(--accent); animation: live-pulse 1.6s ease-in-out infinite;
+}
+@keyframes live-pulse { 50% { opacity: 0.25; } }
 .lock-badge { position: absolute; bottom: -2px; right: -8px; font-size: 11px; }
 
 .armband {

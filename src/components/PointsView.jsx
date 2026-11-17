@@ -7,7 +7,6 @@ import { RULES, chipName, fmtPts } from '../core/rules.js';
 import { scoreWeek, squadIds, weekSnapshot } from '../core/squad.js';
 
 const LIVE_REFRESH = 2 * 60 * 1000;
-const HAS_BENCH = RULES.benchSize > 0;
 
 /** getScores(week, final) resolves to { [id]: { pts, played } }. Refreshed every couple of minutes until final. */
 function useWeekScores(getScores, week, final) {
@@ -41,7 +40,7 @@ function WeekPitch({ getScores, week, snapshot, info, final, locks }) {
     const p = r.id ? { id: r.id, name: r.id, pos: '', ...info[r.id] } : null;
     const pending = toPlay(r.id);
     const dnp = final && r.id && !r.played;
-    const cls = ['spot', !p && 'spot-empty', (r.slot === 'BN' || dnp) && 'spot-faded'].filter(Boolean).join(' ');
+    const cls = ['spot', !p && 'spot-empty', dnp && 'spot-faded'].filter(Boolean).join(' ');
     return (
       <div key={key} className={cls}>
         <span className="spot-slot">{r.slot}</span>
@@ -50,8 +49,7 @@ function WeekPitch({ getScores, week, snapshot, info, final, locks }) {
             <span className="spot-avatar">
               <PlayerAvatar player={p} size={44} />
               {r.mult > 1 && <span className="armband">{r.mult > RULES.captainMultiplier ? `×${r.mult}` : 'C'}</span>}
-              {r.mult === 1 && r.id === snapshot.vice && r.slot !== 'BN' && <span className="armband vice">V</span>}
-              {r.subbedIn && <span className="sub-badge" title="Autosubbed in">↑</span>}
+              {r.mult === 1 && r.id === snapshot.vice && <span className="armband vice">V</span>}
             </span>
             <span className="spot-name">{shortName(p)}</span>
             <span className={`spot-pts${pending ? ' pending' : ''}`}>
@@ -68,12 +66,11 @@ function WeekPitch({ getScores, week, snapshot, info, final, locks }) {
 
   // Before the scores arrive, lay the snapshot out with no points so the pitch doesn't jump.
   const rows = result?.rows ?? snapshot.starters.map((id, i) => ({ slot: RULES.starterSlots[i], id, pts: 0, mult: id && id === snapshot.captain ? RULES.captainMultiplier : 1, bonus: 0 }));
-  const benchRows = result?.benchRows ?? snapshot.bench.map((id) => ({ slot: 'BN', id, pts: 0, mult: 1, bonus: 0 }));
   const played = result ? result.rows.filter((r) => r.id && r.played).length : null;
 
   return (
     <>
-      <div className="summary">
+      <div className="summary summary-3">
         <div>
           <span className="muted">{final ? 'Final' : 'Live'}</span>
           <strong className="ok">{error ? '!' : result ? fmtPts(result.total) : '…'}</strong>
@@ -85,7 +82,6 @@ function WeekPitch({ getScores, week, snapshot, info, final, locks }) {
           <strong>{snapshot.chip ? chipName(snapshot.chip) : '-'}</strong>
           {result?.chip && result.chip !== 'freeHit' && <span className="ok small">+{fmtPts(result.chipPts)}</span>}
         </div>
-        <div><span className="muted">Bench</span><strong>{result ? fmtPts(result.benchRows.reduce((s, r) => s + r.pts, 0)) : '…'}</strong></div>
       </div>
       {error && <p className="error small">{error}</p>}
 
@@ -97,12 +93,6 @@ function WeekPitch({ getScores, week, snapshot, info, final, locks }) {
           </Fragment>
         ))}
       </div>
-      {HAS_BENCH && (
-        <>
-          <div className="bench-label muted small">Bench{final ? ' (after autosubs)' : ''}</div>
-          <div className="bench">{benchRows.map((r, i) => spot(r, `bn-${i}`))}</div>
-        </>
-      )}
     </>
   );
 }
@@ -135,7 +125,7 @@ export default function PointsView({ team, weeks, getScores, locks }) {
       {mode === 'whatIf' && whatIf ? (
         <>
           <div className="notice small">
-            Your current lineup in Week {lastComplete}{RULES.benchSize ? ', with autosubs' : ''} and no transfer hits.
+            Your current lineup in Week {lastComplete} and no transfer hits.
           </div>
           <WeekPitch
             getScores={getScores}

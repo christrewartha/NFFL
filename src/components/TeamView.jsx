@@ -11,7 +11,7 @@ import {
 
 // One pitch row per position, in lineup order. K and DEF share a row, as do TE and FLEX.
 const ROW_KEY = { DEF: 'K', FLEX: 'TE' };
-const PITCH_ROWS = Object.values(
+export const PITCH_ROWS = Object.values(
   RULES.starterSlots.reduce((rows, slot, i) => {
     const key = ROW_KEY[slot] ?? slot;
     (rows[key] ??= []).push(i);
@@ -20,10 +20,10 @@ const PITCH_ROWS = Object.values(
 );
 const HAS_BENCH = RULES.benchSize > 0;
 // The first pitch row made up only of free positions (K and DEF) gets a divider above it.
-const FREE_ROW = PITCH_ROWS.findIndex((row) => row.every((i) => RULES.freePositions.includes(RULES.starterSlots[i])));
+export const FREE_ROW = PITCH_ROWS.findIndex((row) => row.every((i) => RULES.freePositions.includes(RULES.starterSlots[i])));
 
-const FreePicksDivider = () => (
-  <div className="free-divider"><span>Free picks · swap any week without using a transfer</span></div>
+export const FreePicksDivider = ({ label = 'Free picks · swap any week without using a transfer' }) => (
+  <div className="free-divider"><span>{label}</span></div>
 );
 
 export function deadlineParts(weeks, week) {

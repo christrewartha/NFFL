@@ -74,7 +74,7 @@ npm run build      # the server serves the built app from dist/
 npm start          # http://localhost:8787/league
 ```
 
-On first start the server sets itself up: it asks Sleeper which season it is, loads the calendar from ESPN, and begins the league in the first week that hasn't kicked off yet. It prices that week and is ready in a few seconds. Admin commands: `npm run admin -- status`, `accounts`, `leagues`, `reset-password <name> <password>` and `start-week <n>` (before anyone has played a week).
+On first start the server sets itself up: it asks Sleeper which season it is, loads the calendar from ESPN, and begins the league in the first week that hasn't kicked off yet. It prices that week and is ready in a few seconds. Admin commands: `npm run admin -- status`, `accounts`, `leagues`, `reset-password <name> <password>`, `start-week <n>` (before anyone has played a week) and `fresh-start` (delete every team and restart the league from the open week, keeping accounts and mini-leagues; add `--yes` to go ahead).
 
 - **Accounts:** a name and a password (6+ characters). There's no email, so forgotten passwords are reset with the admin command.
 - **Mini-leagues:** anyone can create one from the Leagues tab, which gives a six-letter code and an invite link (`/league?join=CODE`). Someone who opens the link and signs up (or signs in) joins automatically.

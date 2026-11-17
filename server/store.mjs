@@ -86,6 +86,7 @@ export function openStore(path) {
     dropLogin: db.prepare('DELETE FROM logins WHERE token = ?'),
     team: db.prepare('SELECT team_json FROM teams WHERE account_id = ? AND season = ?'),
     teams: db.prepare('SELECT t.account_id, a.name, t.team_json FROM teams t JOIN accounts a ON a.id = t.account_id WHERE t.season = ? ORDER BY a.created_at'),
+    dropTeams: db.prepare('DELETE FROM teams WHERE season = ?'),
     saveTeam: db.prepare('INSERT INTO teams (account_id, season, team_json) VALUES (?, ?, ?) ON CONFLICT (account_id, season) DO UPDATE SET team_json = excluded.team_json'),
     minileague: db.prepare('SELECT * FROM minileagues WHERE id = ?'),
     minileagueByCode: db.prepare('SELECT * FROM minileagues WHERE code = ?'),
@@ -132,6 +133,8 @@ export function openStore(path) {
     },
     /** Every team in the season: [{ accountId, name, team }]. */
     teams: (season) => q.teams.all(season).map((r) => ({ accountId: r.account_id, name: r.name, team: JSON.parse(r.team_json) })),
+    /** Delete every team in the season (accounts and mini-leagues stay). Returns how many. */
+    dropTeams: (season) => Number(q.dropTeams.run(season).changes),
     saveTeam: (accountId, season, team) => q.saveTeam.run(accountId, season, JSON.stringify(team)),
 
     minileague: (id) => q.minileague.get(id),

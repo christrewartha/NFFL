@@ -123,8 +123,8 @@ export default function App() {
       <div className="empty-state">
         <h2>Pick your squad</h2>
         <p>
-          {fmtPrice(RULES.budget)} to spend on 15 players. Transfers are unlimited and free until the
-          Week {market.week} deadline.
+          {fmtPrice(RULES.budget)} to spend on 15 players. Transfers are unlimited and free for the
+          whole of Week {market.week}.
         </p>
         <button className="primary" onClick={startTeam}>Start a new team</button>
       </div>

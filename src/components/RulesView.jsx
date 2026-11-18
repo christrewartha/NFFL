@@ -23,7 +23,7 @@ export default function RulesView({ league = false, children }) {
         {RULES.benchSize > 0 && (
           <li><strong>Autosubs</strong> A starter who doesn't play (bye, inactive) is replaced by the first eligible bench player who did, in bench order.</li>
         )}
-        <li><strong>Transfers</strong> Unlimited and free until your first deadline. Then {RULES.freeTransfersPerWeek} free per week, banking up to {RULES.maxBankedTransfers}. Each extra costs {RULES.hitCost} pts.</li>
+        <li><strong>Transfers</strong> Unlimited and free for the whole of the week you join, however late in the season. Then {RULES.freeTransfersPerWeek} free per week, banking up to {RULES.maxBankedTransfers}. Each extra costs {RULES.hitCost} pts.</li>
         <li><strong>Selling</strong> You keep {RULES.keepProfitShare === 0.5 ? 'half' : `${RULES.keepProfitShare * 100}%`} of any price rise (rounded down), and take the whole of any fall.</li>
         {league ? (
           <>
